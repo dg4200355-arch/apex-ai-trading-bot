@@ -57,13 +57,13 @@ jobs:
         run: PYTHONPATH=. python tools/autonomous_scan.py
       - name: Run immutable second-stage confirmation
         run: PYTHONPATH=. python tools/stress_confirm.py
-      - name: Update frozen-admission forward paper tracker
+      - name: Replay forward bars and reconcile verification after cutoff
         run: PYTHONPATH=. python tools/paper_forward.py
       - name: Apply frozen-admission promotion gate
         run: PYTHONPATH=. python tools/promotion_gate.py
       - name: Apply portfolio concentration gate
         run: PYTHONPATH=. python tools/portfolio_gate.py
-      - name: Update autonomous shadow paper broker
+      - name: Update timing-safe shadow paper broker
         run: PYTHONPATH=. python tools/paper_broker.py
       - name: Validate shadow broker accounting and risk invariants
         run: PYTHONPATH=. python tools/broker_health.py
@@ -109,8 +109,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No report changes"
           else
-            git commit -m "chore: refresh v8.9 validation and shadow paper reports [skip ci]"
+            git commit -m "chore: refresh v9.0 timing-safe validation and paper reports [skip ci]"
             git push origin HEAD:main
           fi
 
-# v8.9.1: manual Adj Close OHLC + explicit normal rejection rows + verification-exit broker + health gate
+# v9.0: manual Adj Close OHLC + explicit rejection rows + next-session verification timing + health-gated paper broker

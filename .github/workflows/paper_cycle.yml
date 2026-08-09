@@ -29,16 +29,16 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Verify timing, market-data and broker invariants
-        run: PYTHONPATH=. pytest -q tests/test_market_data.py tests/test_paper_forward.py tests/test_paper_broker.py tests/test_broker_health.py
+        run: PYTHONPATH=. pytest -q tests/test_market_data.py tests/test_paper_forward.py tests/test_paper_broker.py tests/test_raw_paper_broker.py tests/test_broker_health.py
       - name: Replay newly completed forward bars
         run: PYTHONPATH=. python tools/paper_forward.py
       - name: Refresh forward evidence gate
         run: PYTHONPATH=. python tools/promotion_gate.py
       - name: Refresh correlation/concentration gate
         run: PYTHONPATH=. python tools/portfolio_gate.py
-      - name: Update shadow paper broker
-        run: PYTHONPATH=. python tools/paper_broker.py
-      - name: Validate shadow broker accounting and risk invariants
+      - name: Update raw-execution shadow paper broker
+        run: PYTHONPATH=. python tools/paper_broker_raw.py
+      - name: Validate raw broker accounting and risk invariants
         run: PYTHONPATH=. python tools/broker_health.py
       - name: Upload paper-cycle reports
         if: always()
@@ -77,8 +77,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No paper-state changes"
           else
-            git commit -m "chore: refresh post-close shadow paper cycle [skip ci]"
+            git commit -m "chore: refresh raw-execution shadow paper cycle [skip ci]"
             git push origin HEAD:main
           fi
 
-# v1.3.1: test-gated next-session timing + isolated OHLC repair + broker health
+# v1.4: test-gated raw execution fills + corporate-action accounting + broker health

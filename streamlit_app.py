@@ -9,12 +9,12 @@ import yfinance as yf
 
 from engine import analyze_frame, make_features, run_self_tests
 
-EXPECTED_ENGINE_VERSION = "8.4-full80"
-CONFIRM_ENGINE_VERSION = "8.3-stress-confirm"
+EXPECTED_ENGINE_VERSION = "8.5-frozen-primary"
+CONFIRM_ENGINE_VERSION = "8.5-frozen-confirm"
 EXPECTED_TRACKER_VERSION = "paper-forward-1.1-replay"
-EXPECTED_GATE_VERSION = "promotion-gate-1.1-bootstrap"
+EXPECTED_GATE_VERSION = "promotion-gate-1.2-forward-bh"
 
-st.set_page_config(page_title="APEX Autonomous Validation v8.4", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="APEX Autonomous Validation v8.5", page_icon="🧠", layout="wide")
 st.markdown(
     """
     <meta name="google" content="notranslate">
@@ -133,7 +133,7 @@ def safe_csv(path):
 
 def show_primary_report():
     auto = safe_csv("reports/latest_validation.csv")
-    with st.expander("① 📡 80종목 전체 자동 스캔", expanded=True):
+    with st.expander("① 📡 80종목 전체 자동 스캔 · 전략 동결", expanded=True):
         if auto.empty:
             st.info("새 80종목 자동 스캔 결과를 기다리는 중입니다.")
             return
@@ -149,9 +149,9 @@ def show_primary_report():
         a3.metric("A 통과", f"{len(strict)}개")
         a4.metric("2차 대상", f"{len(watch)}개")
         run_at = str(auto.get("실행시각UTC", pd.Series(["-"])).iloc[0])
-        st.caption(f"{version} · BH 다중검정 분모 80 고정 · UTC {run_at}")
+        st.caption(f"{version} · BH 분모 80 고정 · 전략 파라미터/데이터 기준일 동결 · UTC {run_at}")
         if len(strict):
-            st.success("전체 80종목 보정 후 A 후보가 있습니다. 자동 2차 검증으로 넘깁니다.")
+            st.success("전체 80종목 보정 후 A 후보가 있습니다. 저장된 동일 파라미터 그대로 2차 검증합니다.")
         elif len(watch):
             st.warning("B/관찰 후보만 남았습니다. 아직 실제 자금 투입 대상이 아닙니다.")
         else:
@@ -161,29 +161,33 @@ def show_primary_report():
             if col in show: show[col] = pd.to_numeric(show[col], errors="coerce").apply(pct)
         for col in ["PF","샤프","타이밍p","다중검정q"]:
             if col in show: show[col] = pd.to_numeric(show[col], errors="coerce").apply(num)
-        cols=[c for c in ["최종등급","시장","종목","선택전략","TEST수익","MDD","TEST거래수","PF","샤프","타이밍p","다중검정q","탈락사유"] if c in show]
+        cols=[c for c in ["최종등급","시장","종목","선택전략","전략파라미터","데이터기준일","TEST수익","MDD","TEST거래수","PF","샤프","타이밍p","다중검정q","탈락사유"] if c in show]
         st.dataframe(show[cols], use_container_width=True, hide_index=True)
 
 
 def show_confirmation_report():
     df = safe_csv("reports/latest_confirmation.csv")
-    with st.expander("② 🧪 비용·파라미터·10년 스트레스 확인", expanded=True):
+    with st.expander("② 🧪 완전 동결 2차 스트레스·재현검사", expanded=True):
         if df.empty:
             st.info("2차 확인 대상이 없거나 새 결과를 기다리는 중입니다.")
+            return
+        version = str(df.get("확인엔진", pd.Series(["legacy"])).iloc[0])
+        if version != CONFIRM_ENGINE_VERSION:
+            st.warning(f"2차 결과는 이전 엔진({version})입니다. 새 {CONFIRM_ENGINE_VERSION} 결과를 기다립니다.")
             return
         confirmed = df[df["2차통과"] == "✅"] if "2차통과" in df else df.iloc[0:0]
         b1,b2,b3 = st.columns(3)
         b1.metric("2차 검사", f"{len(df)}개")
         b2.metric("확인후보", f"{len(confirmed)}개")
-        b3.metric("확인 엔진", str(df.get("확인엔진", pd.Series(["-"])).iloc[0]))
+        b3.metric("확인 엔진", version)
         if len(confirmed):
-            st.success("2차 통과: " + ", ".join(confirmed["종목"].astype(str)) + " · 다음 단계는 전략 고정 전진 모의입니다.")
+            st.success("2차 통과: " + ", ".join(confirmed["종목"].astype(str)) + " · 저장된 1차 파라미터를 재선택 없이 그대로 검증했습니다.")
         else:
-            st.warning("1차 후보가 2차 스트레스에서 모두 보류됐습니다.")
+            st.warning("1차 후보가 동결 2차 스트레스에서 모두 보류됐습니다.")
         show=df.copy()
-        for col in ["1차TEST수익","비용중앙수익","비용최악MDD","파라미터양수비율","파라미터중앙수익","10년양수비율","10년중앙수익","10년최악MDD"]:
+        for col in ["1차TEST수익","재현TEST수익","재현오차","비용중앙수익","비용최악MDD","파라미터양수비율","파라미터중앙수익","10년양수비율","10년중앙수익","10년최악MDD"]:
             if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(pct)
-        cols=[c for c in ["2차통과","2차등급","종목","전략","비용중앙수익","파라미터양수비율","10년양수비율","10년중앙수익","10년거래수","보류사유"] if c in show]
+        cols=[c for c in ["2차통과","2차등급","종목","전략","전략파라미터","1차데이터기준일","1차TEST수익","재현TEST수익","재현오차","비용중앙수익","파라미터양수비율","10년양수비율","10년중앙수익","10년거래수","보류사유"] if c in show]
         st.dataframe(show[cols], use_container_width=True, hide_index=True)
 
 
@@ -218,6 +222,10 @@ def show_promotion_report():
         if df.empty:
             st.info("전진 모의 데이터가 쌓이면 최종 게이트가 자동 평가합니다.")
             return
+        gate=str(df.get("게이트",pd.Series(["-"])).iloc[0])
+        if gate != EXPECTED_GATE_VERSION:
+            st.warning(f"최종 게이트는 이전 버전({gate})입니다. 새 {EXPECTED_GATE_VERSION} 결과를 기다립니다.")
+            return
         done=df[df["최종상태"]=="전진검증완료"] if "최종상태" in df else df.iloc[0:0]
         failed=df[df["최종상태"]=="전진실패"] if "최종상태" in df else df.iloc[0:0]
         waiting=df[df["최종상태"]=="관찰중"] if "최종상태" in df else df.iloc[0:0]
@@ -226,8 +234,7 @@ def show_promotion_report():
         d2.metric("검증완료",f"{len(done)}개")
         d3.metric("관찰중",f"{len(waiting)}개")
         d4.metric("전진실패",f"{len(failed)}개")
-        gate=str(df.get("게이트",pd.Series(["-"])).iloc[0])
-        st.caption(f"{gate} · 최소 60거래일·5완료거래 + 추가비용 스트레스 + 부트스트랩 양수확률 70% 이상")
+        st.caption(f"{gate} · 60거래일·5완료거래 + 비용스트레스 + 부트스트랩 + 방향성 sign-test + 후보 전체 BH 보정")
         if len(done):
             st.success("전진검증완료 종목이 있습니다. 이것도 자동 주문 신호가 아니라 추가 의사결정 자료입니다.")
         elif len(failed):
@@ -237,13 +244,14 @@ def show_promotion_report():
         show=df.copy()
         for col in ["전진누적수익","전진MDD","승률","비용스트레스수익","부트스트랩양수확률"]:
             if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(pct)
-        if "PF" in show: show["PF"]=pd.to_numeric(show["PF"],errors="coerce").apply(lambda x:num(x,2))
-        cols=[c for c in ["승격가능","최종상태","종목","전략","관측거래일","완료거래","전진누적수익","전진MDD","승률","PF","비용스트레스수익","부트스트랩양수확률","현재포지션","대기조건"] if c in show]
+        for col in ["PF","방향성p","전진다중검정q"]:
+            if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(lambda x:num(x,3))
+        cols=[c for c in ["승격가능","최종상태","종목","전략","관측거래일","완료거래","전진누적수익","전진MDD","승률","PF","비용스트레스수익","부트스트랩양수확률","방향성p","전진다중검정q","현재포지션","대기조건"] if c in show]
         st.dataframe(show[cols],use_container_width=True,hide_index=True)
 
 
-st.title("🧠 APEX Autonomous Validation v8.4")
-st.caption("80종목 전체 검정 → 2차 스트레스 → 누락일 복구형 전략고정 전진모의 → 최종 통계 게이트")
+st.title("🧠 APEX Autonomous Validation v8.5")
+st.caption("80종목 전체 검정·전략동결 → 동일 파라미터 2차 재현/스트레스 → 누락일 복구형 전진모의 → 최종 통계 게이트")
 st.warning("연구·모의투자용입니다. 어떤 등급도 미래 수익을 보장하지 않으며 실계좌 주문 기능은 없습니다.")
 
 checks=run_self_tests()
@@ -326,7 +334,7 @@ for col in ["PF","샤프","AI OOF AUC","AI TEST AUC","타이밍p","다중검정q
     show[col]=show[col].apply(num)
 cols=["최종통과","최종등급","종목","코드","선택전략","사전중앙수익","TEST수익","TEST구간양수비율","최근63일","MDD","TEST거래수","승률","PF","샤프","타이밍p","다중검정q","AI OOF AUC","AI TEST AUC","탈락사유","점수"]
 st.dataframe(show[cols],use_container_width=True,hide_index=True)
-st.download_button("검증 결과 CSV",result.to_csv(index=False).encode("utf-8-sig"),"apex_v84_manual_validation.csv","text/csv")
+st.download_button("검증 결과 CSV",result.to_csv(index=False).encode("utf-8-sig"),"apex_v85_manual_validation.csv","text/csv")
 
 if errors:
     with st.expander(f"분석 제외 {len(errors)}개"):

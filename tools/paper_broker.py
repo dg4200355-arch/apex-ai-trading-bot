@@ -1,14 +1,16 @@
 """Autonomous shadow paper broker for APEX.
 
 This module is downstream from validation. It NEVER sends live orders and its
-results NEVER feed back into candidate promotion. It consumes only forward-tracker
-events from FROZEN_VERIFIED candidates and maintains virtual cash, whole-share
-positions, fees, slippage, correlation-cluster limits and account risk stops.
+results NEVER feed back into candidate promotion. It consumes forward-tracker
+events and maintains virtual cash, whole-share positions, fees, slippage,
+correlation-cluster limits and account risk stops.
 
 Execution model
 ---------------
 - forward tracker decides at close t-1 and exposes resulting position at open t
 - broker mirrors a position transition at that same open t
+- buys require current FROZEN_VERIFIED admission
+- if verification is revoked while held, the position is forced flat at next open
 - buys use Open * (1 + slippage), sells use Open * (1 - slippage)
 - no leverage, no shorting, no historical backfill before broker initialization
 - one active position per correlation cluster
@@ -38,7 +40,7 @@ ACCOUNT = Path("reports/paper_account.csv")
 POSITIONS = Path("reports/paper_positions.csv")
 SUMMARY = Path("reports/paper_broker.md")
 
-VERSION = "paper-broker-1.1-risk-stop"
+VERSION = "paper-broker-1.2-verification-exit"
 STATE_SCHEMA = 1
 TRACKER_PREFIX = "paper-forward-1.2"
 STARTING_CAPITAL = {
@@ -126,7 +128,6 @@ def new_broker_state(now: str | None = None) -> dict:
 
 
 def compute_buy_quantity(cash: float, equity: float, price: float) -> Tuple[int, float]:
-    """Whole-share quantity with cash reserve and fixed maximum equity fraction."""
     if not all(np.isfinite([cash, equity, price])) or cash <= 0 or equity <= 0 or price <= 0:
         return 0, 0.0
     reserve = equity * CASH_RESERVE_FRACTION
@@ -155,7 +156,6 @@ def account_drawdown(account: dict) -> float:
 
 
 def update_account_risk(account: dict) -> float:
-    """Update worst drawdown and permanently halt new entries at hard threshold."""
     _ensure_account_schema(account)
     dd = account_drawdown(account)
     account["max_drawdown"] = min(float(account.get("max_drawdown", 0.0)), dd)
@@ -274,8 +274,8 @@ def _valid_forward_events() -> pd.DataFrame:
         return pd.DataFrame()
     mask = df["업데이트"].astype(str).eq("NEW_BAR")
     mask &= df["트래커"].astype(str).str.startswith(TRACKER_PREFIX)
-    if "동결검증" in df.columns:
-        mask &= df["동결검증"].astype(str).eq("FROZEN_VERIFIED")
+    # Do NOT discard non-verified rows here. They are required to force an exit
+    # if verification is revoked while a shadow position is already open.
     out = df.loc[mask].copy()
     if out.empty:
         return out
@@ -301,6 +301,11 @@ def _order_row(now: str, date: str, market: str, ticker: str, side: str, status:
         "수량": qty, "체결가": price, "수수료": fee, "슬리피지": SLIPPAGE,
         "실현손익": realized_pnl, "체결후현금": cash_after, "브로커": VERSION,
     }
+
+
+def _is_verified(candidate_state: Dict[str, dict], ticker: str) -> bool:
+    cs = candidate_state.get(ticker, {})
+    return bool(cs.get("frozen_verified")) and not cs.get("quarantine_reason")
 
 
 def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str, dict], cluster_map: Dict[str, str]):
@@ -332,28 +337,29 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
         _ensure_account_schema(account)
         failed_tickers = set()
 
-        # Mark at the open before any new entries. Existing positions may trigger
-        # the permanent account drawdown kill switch. Exits remain allowed.
         mark_account(account, cache, date, "Open")
 
-        # Sells first so exits release cash and cluster capacity.
+        # Exits come first. A held candidate is forced flat if its frozen
+        # verification has been revoked, even when its original strategy remains LONG.
         for _, row in group.iterrows():
             ticker = str(row["코드"])
             desired_long = str(row["현재포지션"]).upper() == "LONG"
-            if ticker in account.get("positions", {}) and not desired_long:
+            verified = _is_verified(candidate_state, ticker)
+            must_exit = ticker in account.get("positions", {}) and ((not desired_long) or (not verified))
+            if must_exit:
                 cluster = str(account["positions"][ticker].get("cluster", cluster_map.get(ticker, ticker)))
+                reason = "VERIFICATION_REVOKED" if not verified else "SIGNAL_EXIT"
                 try:
                     open_px = price_on(cache, ticker, date, "Open")
                     fill, err = execute_sell(account, ticker, open_px)
                     if fill:
-                        order_rows.append(_order_row(now, date, market, ticker, "SELL", "FILLED", "SIGNAL_EXIT", cluster, **fill))
+                        order_rows.append(_order_row(now, date, market, ticker, "SELL", "FILLED", reason, cluster, **fill))
                     else:
                         order_rows.append(_order_row(now, date, market, ticker, "SELL", "BLOCKED", err or "SELL_ERROR", cluster))
                 except Exception as e:
                     failed_tickers.add(ticker)
                     order_rows.append(_order_row(now, date, market, ticker, "SELL", "ERROR", repr(e), cluster))
 
-        # Entries: earliest frozen admission wins same-day ties inside one cluster.
         entries = []
         for _, row in group.iterrows():
             ticker = str(row["코드"])
@@ -366,8 +372,7 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
 
         for _, ticker in entries:
             cluster = str(cluster_map.get(ticker, ticker))
-            cs = candidate_state.get(ticker, {})
-            verified = bool(cs.get("frozen_verified")) and not cs.get("quarantine_reason")
+            verified = _is_verified(candidate_state, ticker)
             if not verified:
                 order_rows.append(_order_row(now, date, market, ticker, "BUY", "BLOCKED", "NOT_FROZEN_VERIFIED", cluster))
                 continue
@@ -405,9 +410,6 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
             "실현손익": float(account.get("realized_pnl", 0.0)), "브로커": VERSION,
         })
 
-        # A transient price/data ERROR must be retried on the next workflow run.
-        # Intentionally blocked events are consumed and can be reconsidered on the
-        # following NEW_BAR if the tracker remains LONG.
         for _, row in group.iterrows():
             ticker = str(row["코드"])
             if ticker not in failed_tickers:
@@ -463,6 +465,7 @@ def write_summary(state: dict, orders_run: List[dict]):
         f"- max positions per market: {MAX_POSITIONS_PER_MARKET}",
         f"- hard new-entry halt: {HARD_DRAWDOWN_HALT:.0%} from account peak",
         f"- fee/slippage each side: {FEE:.2%} / {SLIPPAGE:.2%}",
+        "- revoked verification forces next-open exit",
         "- candidate promotion is independent from broker P/L", "",
         "## Accounts", "",
     ]

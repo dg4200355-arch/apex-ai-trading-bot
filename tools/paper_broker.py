@@ -38,6 +38,7 @@ POSITIONS = Path("reports/paper_positions.csv")
 SUMMARY = Path("reports/paper_broker.md")
 
 VERSION = "paper-broker-1.0-shadow"
+STATE_SCHEMA = 1
 TRACKER_PREFIX = "paper-forward-1.2"
 STARTING_CAPITAL = {
     "KR": {"currency": "KRW", "cash": 10_000_000.0},
@@ -48,6 +49,11 @@ CASH_RESERVE_FRACTION = 0.10
 MAX_POSITIONS_PER_MARKET = 3
 FEE = 0.0015
 SLIPPAGE = 0.0005
+
+POSITION_COLUMNS = [
+    "시장", "통화", "코드", "상관군집", "수량", "진입일", "평균진입가",
+    "최근가격", "평가금액", "미실현손익", "브로커",
+]
 
 
 def _read_json(path: Path, fallback):
@@ -92,6 +98,7 @@ def new_broker_state(now: str | None = None) -> dict:
             "completed_trades": 0,
         }
     return {
+        "schema": STATE_SCHEMA,
         "version": VERSION,
         "initialized_at_utc": now,
         "accounts": accounts,
@@ -145,7 +152,7 @@ def execute_buy(account: dict, ticker: str, market: str, cluster: str, open_pric
         "last_price": exec_price,
     }
     return {
-        "side": "BUY", "qty": qty, "price": exec_price, "fee": fee,
+        "qty": qty, "price": exec_price, "fee": fee,
         "realized_pnl": 0.0, "cash_after": account["cash"],
     }, None
 
@@ -165,7 +172,7 @@ def execute_sell(account: dict, ticker: str, open_price: float):
     account["completed_trades"] = int(account.get("completed_trades", 0)) + 1
     del account["positions"][ticker]
     return {
-        "side": "SELL", "qty": qty, "price": exec_price, "fee": fee,
+        "qty": qty, "price": exec_price, "fee": fee,
         "realized_pnl": realized, "cash_after": account["cash"],
     }, None
 
@@ -231,8 +238,7 @@ def _valid_forward_events() -> pd.DataFrame:
     out["신호기준일"] = pd.to_datetime(out["신호기준일"], errors="coerce")
     out = out.dropna(subset=["신호기준일"])
     out["날짜"] = out["신호기준일"].dt.date.astype(str)
-    out = out.sort_values(["날짜", "시장", "코드"]).drop_duplicates(["코드", "날짜"], keep="last")
-    return out
+    return out.sort_values(["날짜", "시장", "코드"]).drop_duplicates(["코드", "날짜"], keep="last")
 
 
 def _initialize_event_watermarks(state: dict, candidate_state: Dict[str, dict]):
@@ -279,7 +285,8 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
         if market not in state["accounts"]:
             continue
         account = state["accounts"][market]
-        # First, exit positions whose tracker is now flat. Sells release cluster/cash before buys.
+
+        # Sells first so exits release cash and correlation-cluster capacity.
         for _, row in group.iterrows():
             ticker = str(row["코드"])
             desired_long = str(row["현재포지션"]).upper() == "LONG"
@@ -294,9 +301,8 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
                         order_rows.append(_order_row(now, date, market, ticker, "SELL", "BLOCKED", err or "SELL_ERROR", cluster))
                 except Exception as e:
                     order_rows.append(_order_row(now, date, market, ticker, "SELL", "ERROR", repr(e), cluster))
-                    continue
 
-        # Then entries. Earliest admission wins ties inside the same correlation cluster.
+        # Entries: earliest frozen admission wins a same-day tie inside one cluster.
         entries = []
         for _, row in group.iterrows():
             ticker = str(row["코드"])
@@ -304,11 +310,10 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
             if not desired_long or ticker in account.get("positions", {}):
                 continue
             cs = candidate_state.get(ticker, {})
-            admission = str(cs.get("등록시각UTC", "9999"))
-            entries.append((admission, ticker, row))
+            entries.append((str(cs.get("등록시각UTC", "9999")), ticker, row))
         entries.sort(key=lambda x: (x[0], x[1]))
 
-        for _, ticker, row in entries:
+        for _, ticker, _row in entries:
             cluster = str(cluster_map.get(ticker, ticker))
             cs = candidate_state.get(ticker, {})
             verified = bool(cs.get("frozen_verified")) and not cs.get("quarantine_reason")
@@ -322,7 +327,6 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
                 order_rows.append(_order_row(now, date, market, ticker, "BUY", "BLOCKED", "CLUSTER_OCCUPIED", cluster))
                 continue
             try:
-                # Mark existing holdings at the same open before sizing the new order.
                 mark_account(account, cache, date, "Open")
                 open_px = price_on(cache, ticker, date, "Open")
                 fill, err = execute_buy(account, ticker, market, cluster, open_px, date)
@@ -346,7 +350,6 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
             "실현손익": float(account.get("realized_pnl", 0.0)), "브로커": VERSION,
         })
 
-        # Mark only events that reached this date group; blocked entries can retry on a later NEW_BAR.
         for _, row in group.iterrows():
             marks[str(row["코드"])] = str(date)
 
@@ -368,6 +371,22 @@ def current_positions_frame(state: dict) -> pd.DataFrame:
                 "최근가격": last, "평가금액": qty * last if np.isfinite(last) else np.nan,
                 "미실현손익": unreal, "브로커": VERSION,
             })
+    return pd.DataFrame(rows, columns=POSITION_COLUMNS)
+
+
+def initial_account_rows(state: dict, candidate_state: Dict[str, dict]) -> pd.DataFrame:
+    dates = [str(s.get("last_signal_date")) for s in candidate_state.values() if s.get("last_signal_date")]
+    date = max(dates) if dates else "-"
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    rows = []
+    for market, a in state.get("accounts", {}).items():
+        initial = float(a["initial_cash"])
+        rows.append({
+            "시각UTC": now, "기준일": date, "시장": market, "통화": a["currency"],
+            "현금": initial, "보유평가": 0.0, "총자산": initial, "누적수익률": 0.0,
+            "최대낙폭": 0.0, "보유종목수": 0, "완료거래": 0, "실현손익": 0.0,
+            "브로커": VERSION,
+        })
     return pd.DataFrame(rows)
 
 
@@ -375,7 +394,7 @@ def write_summary(state: dict, orders_run: List[dict]):
     lines = [
         "# APEX autonomous shadow paper broker", "",
         f"- broker: {VERSION}",
-        "- live orders: NEVER", 
+        "- live orders: NEVER",
         f"- position sizing: {POSITION_FRACTION:.0%} max per entry",
         f"- cash reserve: {CASH_RESERVE_FRACTION:.0%}",
         f"- max positions per market: {MAX_POSITIONS_PER_MARKET}",
@@ -403,16 +422,17 @@ def main():
     events = _valid_forward_events()
     state = _read_json(BROKER_STATE, None)
 
-    if not isinstance(state, dict) or state.get("version") != VERSION:
+    if not isinstance(state, dict) or int(state.get("schema", -1)) != STATE_SCHEMA:
         state = new_broker_state()
-        # Forward-only initialization: never manufacture trades before broker creation.
         _initialize_event_watermarks(state, candidate_state)
         BROKER_STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
         current_positions_frame(state).to_csv(POSITIONS, index=False, encoding="utf-8-sig")
+        initial_account_rows(state, candidate_state).to_csv(ACCOUNT, index=False, encoding="utf-8-sig")
         write_summary(state, [])
         print("paper broker initialized; no historical backfill")
         return
 
+    state["version"] = VERSION
     orders_run, account_rows = process_events(state, events, candidate_state, cluster_map)
     BROKER_STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
     _append_csv(ORDERS, pd.DataFrame(orders_run))

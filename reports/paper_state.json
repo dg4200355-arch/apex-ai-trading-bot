@@ -23,10 +23,14 @@
     "forward_mdd": 0.0,
     "observations": 1,
     "last_signal_date": "2026-08-07",
-    "tracker_version": "paper-forward-1.1-replay",
+    "tracker_version": "paper-forward-1.2-frozen-admission",
     "trade_returns": [],
     "registered_market_date": "2026-08-07",
-    "model_cutoff": "2026-08-07"
+    "model_cutoff": "2026-08-07",
+    "frozen_verified": true,
+    "quarantine_reason": null,
+    "verification_time_utc": "2026-08-09T06:31:47+00:00",
+    "admission_engine": "8.5-frozen-confirm"
   },
   "V": {
     "종목": "Visa",
@@ -55,7 +59,11 @@
     "forward_mdd": 0.0,
     "observations": 1,
     "last_signal_date": "2026-08-07",
-    "tracker_version": "paper-forward-1.1-replay"
+    "tracker_version": "paper-forward-1.2-frozen-admission",
+    "frozen_verified": true,
+    "quarantine_reason": null,
+    "verification_time_utc": "2026-08-09T06:31:47+00:00",
+    "admission_engine": "8.5-frozen-confirm"
   },
   "MA": {
     "종목": "Mastercard",
@@ -84,6 +92,10 @@
     "forward_mdd": 0.0,
     "observations": 1,
     "last_signal_date": "2026-08-07",
-    "tracker_version": "paper-forward-1.1-replay"
+    "tracker_version": "paper-forward-1.2-frozen-admission",
+    "frozen_verified": true,
+    "quarantine_reason": null,
+    "verification_time_utc": "2026-08-09T06:31:47+00:00",
+    "admission_engine": "8.5-frozen-confirm"
   }
 }

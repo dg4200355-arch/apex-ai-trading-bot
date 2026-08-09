@@ -95,7 +95,7 @@ jobs:
           cp -f reports/paper_broker.md /tmp/apex-report/
           if [ -f reports/paper_orders.csv ]; then cp -f reports/paper_orders.csv /tmp/apex-report/; fi
           git config user.name "github-actions[bot]"
-          git config user.email "4189823+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
           git reset --hard origin/main
           mkdir -p reports
@@ -109,4 +109,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v8.7: v8.6 validation + autonomous account-level shadow paper trading
+# v8.7.1: autonomous validation plus account-level shadow paper trading with preserved state

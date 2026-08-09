@@ -61,6 +61,35 @@ def test_same_cluster_simultaneous_signals_only_first_admission_fills(monkeypatc
     assert len(accounts) == 1
 
 
+def test_hard_drawdown_permanently_halts_new_buys_but_not_state():
+    state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    account = state["accounts"]["US"]
+    account["peak_equity"] = 10_000.0
+    account["last_equity"] = 8_900.0
+    dd = pb.update_account_risk(account)
+    assert dd < pb.HARD_DRAWDOWN_HALT
+    assert account["risk_halt"] is True
+    assert account["max_drawdown"] <= -0.10
+    fill, err = pb.execute_buy(account, "AAA", "US", "C1", 100.0, "2026-08-10")
+    assert fill is None
+    assert err == "ACCOUNT_DRAWDOWN_HALT"
+
+
+def test_price_error_does_not_advance_event_watermark(monkeypatch):
+    state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    state["ticker_last_event"]["AAA"] = "2026-08-09"
+    events = pd.DataFrame([
+        {"날짜": "2026-08-10", "시장": "US", "코드": "AAA", "현재포지션": "LONG"},
+    ])
+    candidates = {
+        "AAA": {"frozen_verified": True, "quarantine_reason": None, "등록시각UTC": "2026-08-09T01:00:00+00:00"},
+    }
+    monkeypatch.setattr(pb, "price_on", lambda cache, ticker, date, field: (_ for _ in ()).throw(RuntimeError("temporary data error")))
+    orders, _ = pb.process_events(state, events, candidates, {"AAA": "C1"})
+    assert any(x["상태"] == "ERROR" for x in orders)
+    assert state["ticker_last_event"]["AAA"] == "2026-08-09"
+
+
 def test_state_schema_is_stable_across_logic_versions():
     state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
     assert state["schema"] == pb.STATE_SCHEMA

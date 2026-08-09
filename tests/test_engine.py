@@ -41,6 +41,20 @@ def test_costs_reduce_return():
     assert costly.ret < free.ret
 
 
+def test_signal_cannot_capture_gap_before_next_open_execution():
+    idx = pd.date_range("2025-01-01", periods=4, freq="B")
+    d = pd.DataFrame(
+        {
+            "Open": [100.0, 200.0, 200.0, 200.0],
+            "Close": [100.0, 200.0, 200.0, 200.0],
+        },
+        index=idx,
+    )
+    sig = pd.Series([True, True, False, False], index=idx)
+    result = perf_from_signal(d, sig, fee=0)
+    assert abs(result.ret) < 1e-12
+
+
 def test_random_pipeline_is_finite_or_strictly_rejected():
     raw = synthetic_ohlcv(seed=21, n=1500, regime="random")
     market = synthetic_ohlcv(seed=22, n=1500, regime="random")

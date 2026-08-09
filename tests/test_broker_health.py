@@ -18,10 +18,17 @@ def test_clean_raw_state_passes_health_check():
     assert bh.validate_state(state, pd.DataFrame()) == []
 
 
-def test_legacy_price_basis_is_rejected():
+def test_missing_raw_price_basis_is_rejected():
     state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    state.pop("price_basis", None)
     errors = bh.validate_state(state, pd.DataFrame())
     assert "price-basis-not-raw-execution" in errors
+
+
+def test_old_broker_version_is_rejected_even_with_raw_basis():
+    state = raw_state()
+    state["version"] = "paper-broker-1.3-verification-timing"
+    errors = bh.validate_state(state, pd.DataFrame())
     assert "broker-version-not-raw-execution" in errors
 
 

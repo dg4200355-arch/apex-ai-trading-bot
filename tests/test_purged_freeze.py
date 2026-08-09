@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from engine import StrategyChoice, split_holdout
 from tools import autonomous_scan as scan
@@ -49,3 +50,23 @@ def test_confirmation_uses_same_purged_boundary():
     assert len(test) == 25
     assert pretest.index[-1] == data.index[69]
     assert test.index[0] == data.index[75]
+
+
+def test_full_scan_faults_fail_closed(monkeypatch, tmp_path):
+    failure = tmp_path / "scan_failure.json"
+    monkeypatch.setattr(scan, "FAILURE_REPORT", failure)
+    scan.fail_closed([], "2026-08-09T00:00:00+00:00")
+    with pytest.raises(SystemExit, match="failed closed"):
+        scan.fail_closed([{"코드": "TEST", "오류": "network"}], "2026-08-09T00:00:00+00:00")
+    assert failure.exists()
+    assert "network" in failure.read_text(encoding="utf-8")
+
+
+def test_stage2_faults_fail_closed(monkeypatch, tmp_path):
+    failure = tmp_path / "confirm_failure.json"
+    monkeypatch.setattr(confirm, "FAILURE_REPORT", failure)
+    confirm.fail_closed([])
+    with pytest.raises(SystemExit, match="failed closed"):
+        confirm.fail_closed([{"코드": "TEST", "오류": "provider"}])
+    assert failure.exists()
+    assert "provider" in failure.read_text(encoding="utf-8")

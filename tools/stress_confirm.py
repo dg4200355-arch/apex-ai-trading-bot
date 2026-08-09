@@ -6,7 +6,9 @@ cutoff, reconstructs the same purged holdout, checks reproducibility, and only
 then tries to break the frozen strategy with higher costs, nearby parameter
 perturbations, and a 10-year historical regime stress ending at the same cutoff.
 
-All OHLCV passes centralized integrity checks. No live orders are placed.
+All OHLCV passes centralized integrity checks. Processing errors fail the stage
+closed so the previous known-good confirmation remains authoritative.
+No live orders are placed.
 """
 from __future__ import annotations
 
@@ -23,6 +25,7 @@ from market_data import download_ohlcv
 REPORT = Path("reports/latest_validation.csv")
 OUT = Path("reports/latest_confirmation.csv")
 SUMMARY = Path("reports/latest_confirmation.md")
+FAILURE_REPORT = Path("reports/failed_confirmation_errors.json")
 BASE_FEE = 0.0015
 STRESS_FEE = 0.0025
 FEES = [0.0015, 0.0025, 0.0035]
@@ -235,18 +238,26 @@ def confirm_one(row: pd.Series) -> Dict[str, object]:
     }
 
 
+def fail_closed(errors: list):
+    if not errors:
+        if FAILURE_REPORT.exists():
+            FAILURE_REPORT.unlink()
+        return
+    FAILURE_REPORT.write_text(
+        json.dumps({"engine": ENGINE_VERSION, "errors": errors}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    raise SystemExit(f"stage-2 failed closed: {len(errors)} processing errors; prior good confirmation preserved")
+
+
 def main():
     Path("reports").mkdir(exist_ok=True)
     if not REPORT.exists():
-        pd.DataFrame().to_csv(OUT, index=False)
-        SUMMARY.write_text("# APEX frozen stress confirmation\n\n- primary report missing\n", encoding="utf-8")
-        return
+        raise SystemExit("primary report missing; confirmation not replaced")
 
     primary = pd.read_csv(REPORT)
     if primary.empty:
-        pd.DataFrame().to_csv(OUT, index=False)
-        SUMMARY.write_text("# APEX frozen stress confirmation\n\n- no primary rows\n", encoding="utf-8")
-        return
+        raise SystemExit("primary report empty; confirmation not replaced")
 
     freeze_cols = {"전략파라미터", "데이터시작일", "데이터기준일", "Embargo거래일"}
     if not freeze_cols.issubset(primary.columns):
@@ -260,6 +271,7 @@ def main():
         except Exception as e:
             errors.append({"종목": row.get("종목"), "코드": row.get("코드"), "오류": repr(e)})
 
+    fail_closed(errors)
     result = pd.DataFrame(rows)
     if not result.empty:
         result = result.sort_values(["2차통과", "비용중앙수익"], ascending=[False, False]).reset_index(drop=True)
@@ -272,7 +284,7 @@ def main():
         f"- split: 75% boundary with {FUTURE}-bar purge/embargo",
         f"- candidates from primary scan: {len(candidates)}",
         f"- confirmed: {len(confirmed)}",
-        f"- errors: {len(errors)}", "",
+        "- processing errors: 0", "",
     ]
     if not result.empty:
         lines += ["## Results", ""]
@@ -283,8 +295,6 @@ def main():
                 f"cost_med={r['비용중앙수익']:.2%}, neighbor_pos={r['파라미터양수비율']:.0%}, "
                 f"10y_pos={r['10년양수비율']:.0%}, reason={r['보류사유']}"
             )
-    if errors:
-        lines += ["", "## Errors", "", "```json", json.dumps(errors, ensure_ascii=False, indent=2), "```"]
     SUMMARY.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
 

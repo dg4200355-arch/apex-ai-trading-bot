@@ -24,7 +24,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Compile Python entrypoints
-        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py tools/portfolio_gate.py tools/paper_broker.py tools/paper_broker_raw.py tools/broker_health.py
+        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py tools/portfolio_gate.py tools/paper_broker.py tools/paper_broker_raw.py tools/paper_broker_safe.py tools/broker_health.py
       - run: PYTHONPATH=. pytest -q
 
   market-smoke:
@@ -64,8 +64,8 @@ jobs:
         run: PYTHONPATH=. python tools/promotion_gate.py
       - name: Apply portfolio concentration gate
         run: PYTHONPATH=. python tools/portfolio_gate.py
-      - name: Update raw-execution shadow paper broker
-        run: PYTHONPATH=. python tools/paper_broker_raw.py
+      - name: Update transactional raw-execution shadow paper broker
+        run: PYTHONPATH=. python tools/paper_broker_safe.py
       - name: Validate raw broker accounting and risk invariants
         run: PYTHONPATH=. python tools/broker_health.py
       - name: Upload validation report
@@ -114,4 +114,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v9.1: purged/fail-closed FULL80 + raw execution shadow broker + corporate-action accounting
+# v9.1.1: purged/fail-closed FULL80 + transactional raw broker + corporate actions + health gate

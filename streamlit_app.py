@@ -9,10 +9,12 @@ import yfinance as yf
 
 from engine import analyze_frame, make_features, run_self_tests
 
-EXPECTED_ENGINE_VERSION = "8.2-next-open"
+EXPECTED_ENGINE_VERSION = "8.4-full80"
 CONFIRM_ENGINE_VERSION = "8.3-stress-confirm"
+EXPECTED_TRACKER_VERSION = "paper-forward-1.1-replay"
+EXPECTED_GATE_VERSION = "promotion-gate-1.1-bootstrap"
 
-st.set_page_config(page_title="APEX Autonomous Validation v8.3", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="APEX Autonomous Validation v8.4", page_icon="🧠", layout="wide")
 st.markdown(
     """
     <meta name="google" content="notranslate">
@@ -67,7 +69,17 @@ def download_one(ticker, period="5y"):
 
 
 def pct(x):
-    return "-" if x is None or not np.isfinite(x) else f"{x*100:.2f}%"
+    try:
+        return "-" if x is None or not np.isfinite(float(x)) else f"{float(x)*100:.2f}%"
+    except Exception:
+        return "-"
+
+
+def num(x, digits=3):
+    try:
+        return "-" if not np.isfinite(float(x)) else f"{float(x):.{digits}f}"
+    except Exception:
+        return "-"
 
 
 def bh_qvalues(values):
@@ -111,47 +123,51 @@ def apply_portfolio_control(result):
 
 def safe_csv(path):
     try:
-        if not Path(path).exists() or Path(path).stat().st_size == 0:
+        p = Path(path)
+        if not p.exists() or p.stat().st_size == 0:
             return pd.DataFrame()
-        return pd.read_csv(path)
+        return pd.read_csv(p)
     except Exception:
         return pd.DataFrame()
 
 
 def show_primary_report():
     auto = safe_csv("reports/latest_validation.csv")
-    with st.expander("① 📡 1차 자동 시장 스캔", expanded=True):
+    with st.expander("① 📡 80종목 전체 자동 스캔", expanded=True):
         if auto.empty:
-            st.info("자동 시장 스캔 결과를 기다리는 중입니다.")
+            st.info("새 80종목 자동 스캔 결과를 기다리는 중입니다.")
             return
-        report_version = str(auto["엔진버전"].iloc[0]) if "엔진버전" in auto.columns else "legacy"
-        if report_version != EXPECTED_ENGINE_VERSION:
-            st.warning(f"이전 엔진({report_version}) 리포트라 숨겼습니다. {EXPECTED_ENGINE_VERSION} 결과를 기다립니다.")
+        version = str(auto.get("엔진버전", pd.Series(["legacy"])).iloc[0])
+        if version != EXPECTED_ENGINE_VERSION:
+            st.warning(f"저장 결과는 이전 엔진({version})입니다. 새 {EXPECTED_ENGINE_VERSION} 결과를 기다리는 중입니다.")
             return
-        run_at = str(auto["실행시각UTC"].iloc[0]) if "실행시각UTC" in auto.columns else "기록 없음"
-        strict = auto[auto["최종통과"] == "✅"] if "최종통과" in auto.columns else auto.iloc[0:0]
-        watch = auto[auto["최종등급"].isin(["A", "B", "관찰"])] if "최종등급" in auto.columns else auto.iloc[0:0]
+        strict = auto[auto["최종통과"] == "✅"] if "최종통과" in auto else auto.iloc[0:0]
+        watch = auto[auto["최종등급"].isin(["A","B","관찰"])] if "최종등급" in auto else auto.iloc[0:0]
         a1,a2,a3,a4 = st.columns(4)
-        a1.metric("검사", f"{len(auto)}개")
-        a2.metric("A 통과", f"{len(strict)}개")
-        a3.metric("2차 대상", f"{len(watch)}개")
-        a4.metric("최고 TEST", pct(pd.to_numeric(auto["TEST수익"], errors="coerce").max()))
-        st.caption(f"엔진 {report_version} · UTC {run_at}")
-        if len(strict): st.success("1차 A 후보가 있습니다. 2차 스트레스 검증을 거칩니다.")
-        elif len(watch): st.warning("1차에서 B/관찰 후보가 남았습니다. 아직 실매수 대상이 아닙니다.")
-        else: st.error("1차 기준 후보 없음 · 관망")
-        display = auto.copy()
+        a1.metric("전체 검정패밀리", "80개")
+        a2.metric("분석 결과", f"{len(auto)}개")
+        a3.metric("A 통과", f"{len(strict)}개")
+        a4.metric("2차 대상", f"{len(watch)}개")
+        run_at = str(auto.get("실행시각UTC", pd.Series(["-"])).iloc[0])
+        st.caption(f"{version} · BH 다중검정 분모 80 고정 · UTC {run_at}")
+        if len(strict):
+            st.success("전체 80종목 보정 후 A 후보가 있습니다. 자동 2차 검증으로 넘깁니다.")
+        elif len(watch):
+            st.warning("B/관찰 후보만 남았습니다. 아직 실제 자금 투입 대상이 아닙니다.")
+        else:
+            st.error("80종목 전체 보정 기준 후보 없음 · 관망")
+        show = auto.copy()
         for col in ["TEST수익","최근63일","MDD","승률"]:
-            if col in display: display[col] = pd.to_numeric(display[col], errors="coerce").apply(pct)
+            if col in show: show[col] = pd.to_numeric(show[col], errors="coerce").apply(pct)
         for col in ["PF","샤프","타이밍p","다중검정q"]:
-            if col in display: display[col] = pd.to_numeric(display[col], errors="coerce").apply(lambda x:"-" if not np.isfinite(x) else f"{x:.3f}")
-        cols=[c for c in ["최종등급","시장","종목","선택전략","TEST수익","MDD","TEST거래수","PF","샤프","타이밍p","다중검정q","탈락사유"] if c in display]
-        st.dataframe(display[cols],use_container_width=True,hide_index=True)
+            if col in show: show[col] = pd.to_numeric(show[col], errors="coerce").apply(num)
+        cols=[c for c in ["최종등급","시장","종목","선택전략","TEST수익","MDD","TEST거래수","PF","샤프","타이밍p","다중검정q","탈락사유"] if c in show]
+        st.dataframe(show[cols], use_container_width=True, hide_index=True)
 
 
 def show_confirmation_report():
     df = safe_csv("reports/latest_confirmation.csv")
-    with st.expander("② 🧪 2차 스트레스 확인", expanded=True):
+    with st.expander("② 🧪 비용·파라미터·10년 스트레스 확인", expanded=True):
         if df.empty:
             st.info("2차 확인 대상이 없거나 새 결과를 기다리는 중입니다.")
             return
@@ -159,46 +175,75 @@ def show_confirmation_report():
         b1,b2,b3 = st.columns(3)
         b1.metric("2차 검사", f"{len(df)}개")
         b2.metric("확인후보", f"{len(confirmed)}개")
-        b3.metric("확인 엔진", str(df["확인엔진"].iloc[0]) if "확인엔진" in df else "-")
+        b3.metric("확인 엔진", str(df.get("확인엔진", pd.Series(["-"])).iloc[0]))
         if len(confirmed):
-            names = ", ".join(confirmed["종목"].astype(str).tolist())
-            st.success(f"2차 스트레스까지 통과: {names} · 아직 실제 매수 아님, 전진 모의검증 단계")
+            st.success("2차 통과: " + ", ".join(confirmed["종목"].astype(str)) + " · 다음 단계는 전략 고정 전진 모의입니다.")
         else:
-            st.warning("1차 후보가 2차 스트레스에서 모두 탈락했습니다.")
-        show = df.copy()
-        for col in ["1차TEST수익","비용양수비율","비용중앙수익","비용최악MDD","파라미터양수비율","파라미터중앙수익","파라미터최악MDD","10년양수비율","10년중앙수익","10년최악MDD"]:
-            if col in show: show[col] = pd.to_numeric(show[col], errors="coerce").apply(pct)
+            st.warning("1차 후보가 2차 스트레스에서 모두 보류됐습니다.")
+        show=df.copy()
+        for col in ["1차TEST수익","비용중앙수익","비용최악MDD","파라미터양수비율","파라미터중앙수익","10년양수비율","10년중앙수익","10년최악MDD"]:
+            if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(pct)
         cols=[c for c in ["2차통과","2차등급","종목","전략","비용중앙수익","파라미터양수비율","10년양수비율","10년중앙수익","10년거래수","보류사유"] if c in show]
-        st.dataframe(show[cols],use_container_width=True,hide_index=True)
+        st.dataframe(show[cols], use_container_width=True, hide_index=True)
 
 
 def show_paper_report():
     df = safe_csv("reports/paper_forward.csv")
-    with st.expander("③ 🧾 전진 모의검증", expanded=True):
+    with st.expander("③ 🧾 누락일 복구형 전진 모의검증", expanded=True):
         if df.empty:
-            st.info("2차 확인후보가 등록되면 이후 새 시장 데이터만으로 전진 모의추적을 시작합니다.")
+            st.info("2차 확인후보가 생기면 전략을 동결하고 새 시장 데이터만 추적합니다.")
             return
-        if "시각UTC" in df.columns:
-            df = df.sort_values("시각UTC")
-        latest = df.drop_duplicates("코드", keep="last") if "코드" in df.columns else df.tail(10)
-        ok = latest[latest.get("오류").isna()] if "오류" in latest.columns else latest
+        sort_cols=[c for c in ["신호기준일","시각UTC"] if c in df]
+        if sort_cols: df=df.sort_values(sort_cols)
+        latest=df.drop_duplicates("코드",keep="last") if "코드" in df else df.tail(10)
         c1,c2,c3 = st.columns(3)
         c1.metric("추적 종목", f"{len(latest)}개")
-        c2.metric("완료 거래", f"{int(pd.to_numeric(ok.get('완료거래',pd.Series(dtype=float)),errors='coerce').fillna(0).sum())}회")
-        best = pd.to_numeric(ok.get("전진누적수익",pd.Series(dtype=float)),errors="coerce").max()
-        c3.metric("최고 전진수익", pct(best) if np.isfinite(best) else "-")
-        st.caption("이 구간은 과거 재최적화 없이, 후보 등록 이후 새 바(bar)만 누적합니다.")
+        total_trades=int(pd.to_numeric(latest.get("완료거래",pd.Series(dtype=float)),errors="coerce").fillna(0).sum())
+        c2.metric("완료 거래", f"{total_trades}회")
+        best=pd.to_numeric(latest.get("전진누적수익",pd.Series(dtype=float)),errors="coerce").max()
+        c3.metric("최고 전진수익", pct(best))
+        tracker=str(latest.get("트래커",pd.Series(["-"])).iloc[-1])
+        st.caption(f"트래커 {tracker} · 자동실행이 빠져도 마지막 처리일 이후 모든 새 거래일을 순서대로 재생합니다.")
         show=latest.copy()
         for col in ["승률","전진누적수익","전진MDD"]:
             if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(pct)
-        for col in ["PF"]:
-            if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(lambda x:"-" if not np.isfinite(x) else f"{x:.2f}")
-        cols=[c for c in ["종목","코드","전략","신호기준일","종가신호","현재포지션","관측거래일","완료거래","승률","PF","전진누적수익","전진MDD","오류"] if c in show]
+        if "PF" in show: show["PF"]=pd.to_numeric(show["PF"],errors="coerce").apply(lambda x:num(x,2))
+        cols=[c for c in ["종목","코드","전략","신호기준일","종가신호","현재포지션","관측거래일","완료거래","승률","PF","전진누적수익","전진MDD","업데이트","오류"] if c in show]
         st.dataframe(show[cols],use_container_width=True,hide_index=True)
 
 
-st.title("🧠 APEX Autonomous Validation v8.3")
-st.caption("1차 다중전략 검증 → 2차 비용·파라미터·10년 스트레스 → 전략 고정 전진 모의검증")
+def show_promotion_report():
+    df=safe_csv("reports/promotion_status.csv")
+    with st.expander("④ 🛡️ 최종 전진증거 게이트", expanded=True):
+        if df.empty:
+            st.info("전진 모의 데이터가 쌓이면 최종 게이트가 자동 평가합니다.")
+            return
+        done=df[df["최종상태"]=="전진검증완료"] if "최종상태" in df else df.iloc[0:0]
+        failed=df[df["최종상태"]=="전진실패"] if "최종상태" in df else df.iloc[0:0]
+        waiting=df[df["최종상태"]=="관찰중"] if "최종상태" in df else df.iloc[0:0]
+        d1,d2,d3,d4=st.columns(4)
+        d1.metric("추적",f"{len(df)}개")
+        d2.metric("검증완료",f"{len(done)}개")
+        d3.metric("관찰중",f"{len(waiting)}개")
+        d4.metric("전진실패",f"{len(failed)}개")
+        gate=str(df.get("게이트",pd.Series(["-"])).iloc[0])
+        st.caption(f"{gate} · 최소 60거래일·5완료거래 + 추가비용 스트레스 + 부트스트랩 양수확률 70% 이상")
+        if len(done):
+            st.success("전진검증완료 종목이 있습니다. 이것도 자동 주문 신호가 아니라 추가 의사결정 자료입니다.")
+        elif len(failed):
+            st.error("전진 데이터에서 실패 기준에 도달한 후보가 있습니다. 기록은 삭제하지 않고 계속 보존합니다.")
+        else:
+            st.info("아직 최종 승격 조건을 채운 종목이 없습니다.")
+        show=df.copy()
+        for col in ["전진누적수익","전진MDD","승률","비용스트레스수익","부트스트랩양수확률"]:
+            if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(pct)
+        if "PF" in show: show["PF"]=pd.to_numeric(show["PF"],errors="coerce").apply(lambda x:num(x,2))
+        cols=[c for c in ["승격가능","최종상태","종목","전략","관측거래일","완료거래","전진누적수익","전진MDD","승률","PF","비용스트레스수익","부트스트랩양수확률","현재포지션","대기조건"] if c in show]
+        st.dataframe(show[cols],use_container_width=True,hide_index=True)
+
+
+st.title("🧠 APEX Autonomous Validation v8.4")
+st.caption("80종목 전체 검정 → 2차 스트레스 → 누락일 복구형 전략고정 전진모의 → 최종 통계 게이트")
 st.warning("연구·모의투자용입니다. 어떤 등급도 미래 수익을 보장하지 않으며 실계좌 주문 기능은 없습니다.")
 
 checks=run_self_tests()
@@ -211,6 +256,7 @@ else:
 show_primary_report()
 show_confirmation_report()
 show_paper_report()
+show_promotion_report()
 
 with st.sidebar:
     st.header("수동 검증")
@@ -225,7 +271,7 @@ with st.sidebar:
     run=st.button("🚀 수동 자율 검증",type="primary")
 
 if not run:
-    st.info("자동 파이프라인은 평일에 갱신됩니다. 위 ①→②→③ 단계만 확인하면 됩니다.")
+    st.info("자동 파이프라인은 평일마다 80종목 전체를 갱신합니다. 위 ①→④ 단계만 확인하면 됩니다.")
     st.stop()
 
 if market_choice=="한국 40종목":
@@ -269,7 +315,7 @@ c2.metric("A 통과",f"{len(strict)}개")
 c3.metric("관찰 이상",f"{len(watch)}개")
 c4.metric("최고 TEST",pct(result["TEST수익"].max()))
 
-if len(strict): st.success("A등급 후보가 있습니다. 자동 2차·전진 검증 없이는 실제 자금 투입하지 않습니다.")
+if len(strict): st.success("수동 A등급 후보가 있습니다. 자동 2차·전진 검증 없이는 실제 자금 투입하지 않습니다.")
 elif len(watch): st.warning("B/관찰 후보만 있습니다. 실매수 보류입니다.")
 else: st.error("통계적으로 남은 후보가 없습니다. 관망입니다.")
 
@@ -277,15 +323,10 @@ show=result.copy()
 for col in ["사전중앙수익","사전양수비율","TEST수익","TEST구간양수비율","TEST구간중앙수익","최근63일","매수보유","MDD","승률"]:
     show[col]=show[col].apply(pct)
 for col in ["PF","샤프","AI OOF AUC","AI TEST AUC","타이밍p","다중검정q","점수"]:
-    show[col]=show[col].apply(lambda x:"-" if not np.isfinite(x) else f"{x:.3f}")
+    show[col]=show[col].apply(num)
 cols=["최종통과","최종등급","종목","코드","선택전략","사전중앙수익","TEST수익","TEST구간양수비율","최근63일","MDD","TEST거래수","승률","PF","샤프","타이밍p","다중검정q","AI OOF AUC","AI TEST AUC","탈락사유","점수"]
 st.dataframe(show[cols],use_container_width=True,hide_index=True)
-
-st.subheader("선택 전략 분포")
-st.bar_chart(result["선택전략"].value_counts())
-st.subheader("상위 후보 TEST 수익")
-st.bar_chart(result.set_index("종목")[["TEST수익"]].head(12)*100)
-st.download_button("검증 결과 CSV",result.to_csv(index=False).encode("utf-8-sig"),"apex_v83_validation.csv","text/csv")
+st.download_button("검증 결과 CSV",result.to_csv(index=False).encode("utf-8-sig"),"apex_v84_manual_validation.csv","text/csv")
 
 if errors:
     with st.expander(f"분석 제외 {len(errors)}개"):

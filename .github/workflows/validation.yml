@@ -147,9 +147,9 @@ jobs:
           git reset --hard origin/main
           mkdir -p reports
           cp -f /tmp/apex-status/full_pipeline_status.json reports/
-          if [ "$JOB_STATUS" = "success" ]; then
-            git rm -f --ignore-unmatch reports/failed_scan_errors.json reports/failed_confirmation_errors.json reports/failed_paper_broker.json || true
-          else
+          # Never let a diagnostic from an older failed run masquerade as the current one.
+          git rm -f --ignore-unmatch reports/failed_scan_errors.json reports/failed_confirmation_errors.json reports/failed_paper_broker.json || true
+          if [ "$JOB_STATUS" != "success" ]; then
             for f in failed_scan_errors.json failed_confirmation_errors.json failed_paper_broker.json; do
               if [ -f "/tmp/apex-status/$f" ]; then cp -f "/tmp/apex-status/$f" "reports/$f"; fi
             done
@@ -166,4 +166,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v9.1.3: known-good reports + always-persisted FULL80 heartbeat/fail-closed diagnostics
+# v9.1.5: heartbeat diagnostics are current-run-only; stale failure files are removed first

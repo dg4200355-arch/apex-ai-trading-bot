@@ -1,242 +1,290 @@
 [
   {
     "시장": "KR",
+    "종목": "삼성전자",
+    "코드": "005930.KS",
+    "오류": "ValueError('low-price invariant failed: 005930.KS date=2024-10-14 excess=0.1684% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
+    "엔진버전": "8.5-frozen-primary"
+  },
+  {
+    "시장": "KR",
     "종목": "SK하이닉스",
     "코드": "000660.KS",
-    "오류": "ValueError('low-price invariant failed: 000660.KS date=2023-02-02 excess=1.4024% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 000660.KS date=2023-02-09 excess=0.1055% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "현대차",
     "코드": "005380.KS",
-    "오류": "ValueError('low-price invariant failed: 005380.KS date=2023-02-01 excess=1.0077% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 005380.KS date=2024-01-15 excess=0.1603% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "기아",
     "코드": "000270.KS",
-    "오류": "ValueError('high-price invariant failed: 000270.KS date=2024-01-15 excess=1.5642% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 000270.KS date=2024-01-15 excess=1.5642% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "NAVER",
     "코드": "035420.KS",
-    "오류": "ValueError('low-price invariant failed: 035420.KS date=2023-02-02 excess=2.3753% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('low-price invariant failed: 035420.KS date=2023-02-02 excess=2.3753% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "삼성바이오로직스",
     "코드": "207940.KS",
-    "오류": "ValueError('high-price invariant failed: 207940.KS date=2024-01-15 excess=0.9247% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 207940.KS date=2024-01-15 excess=0.9247% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "셀트리온",
     "코드": "068270.KS",
-    "오류": "ValueError('high-price invariant failed: 068270.KS date=2023-02-10 excess=0.6075% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 068270.KS date=2023-02-10 excess=0.6075% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "LG에너지솔루션",
     "코드": "373220.KS",
-    "오류": "ValueError('low-price invariant failed: 373220.KS date=2024-01-15 excess=0.8685% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('low-price invariant failed: 373220.KS date=2024-01-15 excess=0.8685% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
+    "엔진버전": "8.5-frozen-primary"
+  },
+  {
+    "시장": "KR",
+    "종목": "POSCO홀딩스",
+    "코드": "005490.KS",
+    "오류": "ValueError('high-price invariant failed: 005490.KS date=2024-10-14 excess=0.1364% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "한화에어로스페이스",
     "코드": "012450.KS",
-    "오류": "ValueError('high-price invariant failed: 012450.KS date=2026-03-27 excess=1.4826% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 012450.KS date=2026-03-27 excess=1.4826% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "HD현대중공업",
     "코드": "329180.KS",
-    "오류": "ValueError('high-price invariant failed: 329180.KS date=2024-01-15 excess=0.6645% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 329180.KS date=2024-01-15 excess=0.6645% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "KB금융",
     "코드": "105560.KS",
-    "오류": "ValueError('high-price invariant failed: 105560.KS date=2024-01-15 excess=0.7813% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 105560.KS date=2024-01-15 excess=0.7813% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "신한지주",
     "코드": "055550.KS",
-    "오류": "ValueError('high-price invariant failed: 055550.KS date=2023-01-30 excess=1.0158% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 055550.KS date=2023-01-30 excess=1.0158% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "하나금융지주",
     "코드": "086790.KS",
-    "오류": "ValueError('high-price invariant failed: 086790.KS date=2024-01-15 excess=0.9501% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 086790.KS date=2024-01-15 excess=0.9501% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
+    "엔진버전": "8.5-frozen-primary"
+  },
+  {
+    "시장": "KR",
+    "종목": "우리금융지주",
+    "코드": "316140.KS",
+    "오류": "ValueError('high-price invariant failed: 316140.KS date=2024-01-15 excess=0.1587% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
+    "엔진버전": "8.5-frozen-primary"
+  },
+  {
+    "시장": "KR",
+    "종목": "삼성물산",
+    "코드": "028260.KS",
+    "오류": "ValueError('low-price invariant failed: 028260.KS date=2024-01-15 excess=0.4132% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "삼성SDI",
     "코드": "006400.KS",
-    "오류": "ValueError('high-price invariant failed: 006400.KS date=2024-10-14 excess=1.6349% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 006400.KS date=2024-10-14 excess=1.6349% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "LG화학",
     "코드": "051910.KS",
-    "오류": "ValueError('high-price invariant failed: 051910.KS date=2024-10-14 excess=0.9972% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 051910.KS date=2024-10-14 excess=0.9972% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "SK이노베이션",
     "코드": "096770.KS",
-    "오류": "ValueError('high-price invariant failed: 096770.KS date=2024-11-07 excess=0.5333% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 096770.KS date=2024-11-07 excess=0.5333% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "SK텔레콤",
     "코드": "017670.KS",
-    "오류": "ValueError('안정적인 후보 전략 없음')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 017670.KS date=2026-03-27 excess=0.1252% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
+    "엔진버전": "8.5-frozen-primary"
+  },
+  {
+    "시장": "KR",
+    "종목": "KT",
+    "코드": "030200.KS",
+    "오류": "ValueError('high-price invariant failed: 030200.KS date=2023-02-07 excess=0.4392% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "두산에너빌리티",
     "코드": "034020.KS",
-    "오류": "ValueError('high-price invariant failed: 034020.KS date=2026-03-27 excess=1.7137% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 034020.KS date=2026-03-27 excess=1.7137% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "현대로템",
     "코드": "064350.KS",
-    "오류": "ValueError('high-price invariant failed: 064350.KS date=2023-02-06 excess=4.0367% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 064350.KS date=2023-02-06 excess=4.0367% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "한화오션",
     "코드": "042660.KS",
-    "오류": "ValueError('high-price invariant failed: 042660.KS date=2026-03-27 excess=1.8639% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 042660.KS date=2026-03-27 excess=1.8639% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "대한항공",
     "코드": "003490.KS",
-    "오류": "ValueError('low-price invariant failed: 003490.KS date=2024-01-15 excess=0.8639% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 003490.KS date=2023-02-07 excess=0.2110% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "아모레퍼시픽",
     "코드": "090430.KS",
-    "오류": "ValueError('low-price invariant failed: 090430.KS date=2024-01-15 excess=2.7092% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 090430.KS date=2024-10-14 excess=0.2400% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "KT&G",
     "코드": "033780.KS",
-    "오류": "ValueError('high-price invariant failed: 033780.KS date=2023-01-27 excess=1.6878% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 033780.KS date=2023-01-27 excess=1.6878% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "삼성전기",
     "코드": "009150.KS",
-    "오류": "ValueError('high-price invariant failed: 009150.KS date=2026-03-27 excess=4.2189% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 009150.KS date=2026-03-27 excess=4.2189% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "LG이노텍",
     "코드": "011070.KS",
-    "오류": "ValueError('high-price invariant failed: 011070.KS date=2023-02-10 excess=0.8651% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 011070.KS date=2023-02-10 excess=0.8651% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "삼성중공업",
     "코드": "010140.KS",
-    "오류": "ValueError('high-price invariant failed: 010140.KS date=2024-01-15 excess=1.3793% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 010140.KS date=2024-01-15 excess=1.3793% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
+    "엔진버전": "8.5-frozen-primary"
+  },
+  {
+    "시장": "KR",
+    "종목": "기업은행",
+    "코드": "024110.KS",
+    "오류": "ValueError('high-price invariant failed: 024110.KS date=2024-01-15 excess=0.4322% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "포스코퓨처엠",
     "코드": "003670.KS",
-    "오류": "ValueError('low-price invariant failed: 003670.KS date=2023-01-31 excess=2.0225% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('low-price invariant failed: 003670.KS date=2023-01-31 excess=2.0225% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "에코프로비엠",
     "코드": "247540.KQ",
-    "오류": "ValueError('low-price invariant failed: 247540.KQ date=2023-01-30 excess=1.3672% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 247540.KQ date=2023-01-26 excess=0.1896% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "에코프로",
     "코드": "086520.KQ",
-    "오류": "ValueError('high-price invariant failed: 086520.KQ date=2024-10-14 excess=1.2820% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 086520.KQ date=2024-10-14 excess=1.2820% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "알테오젠",
     "코드": "196170.KQ",
-    "오류": "ValueError('low-price invariant failed: 196170.KQ date=2024-01-15 excess=1.2168% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('low-price invariant failed: 196170.KQ date=2024-01-15 excess=1.2168% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
     "시장": "KR",
     "종목": "HLB",
     "코드": "028300.KQ",
-    "오류": "ValueError('high-price invariant failed: 028300.KQ date=2025-04-09 excess=1.4545% tol=0.50%')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "오류": "ValueError('high-price invariant failed: 028300.KQ date=2025-04-09 excess=1.4545% tol=0.05%')",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
@@ -244,7 +292,7 @@
     "종목": "Intel",
     "코드": "INTC",
     "오류": "ValueError('안정적인 후보 전략 없음')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
@@ -252,7 +300,7 @@
     "종목": "PepsiCo",
     "코드": "PEP",
     "오류": "ValueError('안정적인 후보 전략 없음')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   },
   {
@@ -260,7 +308,7 @@
     "종목": "Nike",
     "코드": "NKE",
     "오류": "ValueError('안정적인 후보 전략 없음')",
-    "실행시각UTC": "2026-08-09T07:26:12+00:00",
+    "실행시각UTC": "2026-08-09T07:32:52+00:00",
     "엔진버전": "8.5-frozen-primary"
   }
 ]

@@ -1,0 +1,28 @@
+{
+  "CVX": {
+    "종목": "Chevron",
+    "코드": "CVX",
+    "시장": "US",
+    "전략": "반전",
+    "전략파라미터": {
+      "bb": 0.25,
+      "rsi": 40
+    },
+    "등록시각UTC": "2026-08-09T05:50:06+00:00",
+    "position": false,
+    "entry_price": null,
+    "entry_date": null,
+    "pending_date": "2026-08-07",
+    "pending_signal": false,
+    "realized_equity": 1.0,
+    "completed_trades": 0,
+    "wins": 0,
+    "gross_profit": 0.0,
+    "gross_loss": 0.0,
+    "max_mark_equity": 1.0,
+    "forward_mdd": 0.0,
+    "observations": 1,
+    "last_signal_date": "2026-08-07",
+    "tracker_version": "paper-forward-1.0"
+  }
+}

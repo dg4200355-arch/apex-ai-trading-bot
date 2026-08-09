@@ -113,4 +113,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v8.9: manual one-factor Adj Close OHLC + frozen validation + verification-exit broker + health gate
+# v8.9.1: manual Adj Close OHLC + explicit normal rejection rows + verification-exit broker + health gate

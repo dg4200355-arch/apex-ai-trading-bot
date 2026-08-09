@@ -4,7 +4,7 @@
 - split: 75% boundary with 5-bar purge/embargo
 - candidates from primary scan: 4
 - confirmed: 3
-- errors: 0
+- processing errors: 0
 
 ## Results
 

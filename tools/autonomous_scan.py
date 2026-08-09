@@ -1,10 +1,8 @@
 """Autonomous real-market validation runner.
 
-Every scheduled run scans the full liquid universe: 40 Korea + 40 US stocks.
-Benjamini-Hochberg adjustment uses a fixed family size of all 80 hypotheses.
-The exact strategy parameters and exact market-data window selected in stage 1 are
-written into the primary report. All OHLCV passes centralized integrity checks.
-Valid data with no stable strategy is recorded as a normal rejection, not an error.
+Every scheduled run scans 40 Korea + 40 US stocks. Global BH correction uses all
+80 hypotheses. Stable-strategy absence is a normal rejection, while true data or
+engine faults remain separate errors. Data repair diagnostics are recorded per row.
 No live orders are placed.
 """
 from datetime import datetime, timezone
@@ -113,30 +111,13 @@ def freeze_selected_choice(data: pd.DataFrame, expected_kind: str):
 
 def normal_rejection_row(name: str, ticker: str, reason: str) -> dict:
     return {
-        "통과": "❌",
-        "등급": "탈락",
-        "종목": name,
-        "코드": ticker,
-        "선택전략": "없음",
-        "사전중앙수익": np.nan,
-        "사전양수비율": np.nan,
-        "TEST수익": np.nan,
-        "TEST구간양수비율": np.nan,
-        "TEST구간중앙수익": np.nan,
-        "타이밍p": 1.0,
-        "최근63일": np.nan,
-        "매수보유": np.nan,
-        "MDD": np.nan,
-        "TEST거래수": 0,
-        "승률": np.nan,
-        "PF": np.nan,
-        "샤프": np.nan,
-        "AI OOF AUC": np.nan,
-        "AI TEST AUC": np.nan,
-        "탈락사유": reason,
-        "점수": -999.0,
-        "전략파라미터": "{}",
-        "전략검증점수": np.nan,
+        "통과": "❌", "등급": "탈락", "종목": name, "코드": ticker, "선택전략": "없음",
+        "사전중앙수익": np.nan, "사전양수비율": np.nan, "TEST수익": np.nan,
+        "TEST구간양수비율": np.nan, "TEST구간중앙수익": np.nan, "타이밍p": 1.0,
+        "최근63일": np.nan, "매수보유": np.nan, "MDD": np.nan, "TEST거래수": 0,
+        "승률": np.nan, "PF": np.nan, "샤프": np.nan, "AI OOF AUC": np.nan,
+        "AI TEST AUC": np.nan, "탈락사유": reason, "점수": -999.0,
+        "전략파라미터": "{}", "전략검증점수": np.nan,
     }
 
 
@@ -156,6 +137,8 @@ def main():
     for market_name, name, ticker, benchmark in cases:
         try:
             raw = dl(ticker)
+            repaired = int(raw.attrs.get("ohlcv_repaired_bars", 0))
+            max_repair = float(raw.attrs.get("ohlcv_max_repair_pct", 0.0))
             data = make_features(raw, markets[benchmark], future=FUTURE, target_pct=TARGET_PCT)
             try:
                 result = analyze_frame(name, ticker, data, future=FUTURE, fee=BASE_FEE, fast_mode=True)
@@ -173,19 +156,17 @@ def main():
             result["데이터시작일"] = pd.Timestamp(raw.index[0]).date().isoformat()
             result["데이터기준일"] = pd.Timestamp(raw.index[-1]).date().isoformat()
             result["데이터행수"] = int(len(raw))
+            result["OHLC보정봉수"] = repaired
+            result["OHLC최대보정폭"] = max_repair
             result["시장"] = market_name
             result["실행시각UTC"] = run_at
             result["엔진버전"] = ENGINE_VERSION
             rows.append(result)
-            print(ticker, result.get("등급"), result.get("선택전략"), result.get("탈락사유"), result.get("TEST수익"))
+            print(ticker, result.get("등급"), result.get("선택전략"), f"repairs={repaired}", result.get("TEST수익"))
         except Exception as e:
             errors.append({
-                "시장": market_name,
-                "종목": name,
-                "코드": ticker,
-                "오류": repr(e),
-                "실행시각UTC": run_at,
-                "엔진버전": ENGINE_VERSION,
+                "시장": market_name, "종목": name, "코드": ticker, "오류": repr(e),
+                "실행시각UTC": run_at, "엔진버전": ENGINE_VERSION,
             })
             print(ticker, "ERROR", repr(e))
 
@@ -203,17 +184,15 @@ def main():
     strict = result[result["최종통과"] == "✅"]
     watch = result[result["최종등급"].isin(["A", "B", "관찰"])]
     normal_rejects = int((result["선택전략"] == "없음").sum())
+    repaired_rows = int((pd.to_numeric(result["OHLC보정봉수"], errors="coerce").fillna(0) > 0).sum())
+    total_repairs = int(pd.to_numeric(result["OHLC보정봉수"], errors="coerce").fillna(0).sum())
     lines = [
         "# APEX autonomous validation summary", "",
-        f"- engine_version: {ENGINE_VERSION}",
-        "- scan_mode: FULL80",
-        f"- run_at_utc: {run_at}",
-        f"- universe: {FAMILY_SIZE}",
-        f"- result_rows: {len(result)}",
-        f"- valid-data normal rejections: {normal_rejects}",
-        f"- true data/engine errors: {len(errors)}",
-        f"- A-grade passed after global correction: {len(strict)}",
-        f"- watch-or-better: {len(watch)}", "",
+        f"- engine_version: {ENGINE_VERSION}", "- scan_mode: FULL80", f"- run_at_utc: {run_at}",
+        f"- universe: {FAMILY_SIZE}", f"- result_rows: {len(result)}",
+        f"- valid-data normal rejections: {normal_rejects}", f"- true data/engine errors: {len(errors)}",
+        f"- tickers with isolated OHLC repairs: {repaired_rows}", f"- total repaired OHLC bars: {total_repairs}",
+        f"- A-grade passed after global correction: {len(strict)}", f"- watch-or-better: {len(watch)}", "",
         "## Top candidates", "",
     ]
     for _, r in result.head(15).iterrows():
@@ -223,7 +202,8 @@ def main():
         test_ret = r["TEST수익"] if np.isfinite(r["TEST수익"]) else float("nan")
         lines.append(
             f"- {r['최종등급']} {r['종목']} ({r['코드']}): strategy={r['선택전략']} {r['전략파라미터']}, "
-            f"TEST={test_ret:.2%}, PF={pf:.2f}, timing_p={tp:.3f}, q80={qv:.3f}, data_end={r['데이터기준일']}"
+            f"TEST={test_ret:.2%}, PF={pf:.2f}, timing_p={tp:.3f}, q80={qv:.3f}, "
+            f"repairs={int(r['OHLC보정봉수'])}, data_end={r['데이터기준일']}"
         )
     (out_dir / "latest_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))

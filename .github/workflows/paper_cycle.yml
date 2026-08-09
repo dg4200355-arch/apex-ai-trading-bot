@@ -29,7 +29,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Verify timing, market-data and broker invariants
-        run: PYTHONPATH=. pytest -q tests/test_market_data.py tests/test_paper_forward.py tests/test_paper_broker.py tests/test_raw_paper_broker.py tests/test_broker_health.py
+        run: PYTHONPATH=. pytest -q tests/test_market_data.py tests/test_paper_forward.py tests/test_paper_broker.py tests/test_raw_paper_broker.py tests/test_paper_broker_safe.py tests/test_broker_health.py
       - name: Replay newly completed forward bars
         run: PYTHONPATH=. python tools/paper_forward.py
       - name: Refresh forward evidence gate
@@ -81,4 +81,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v1.4.2: transactional raw execution + corporate-action accounting + health gate
+# v1.4.3: end-to-end transactional raw execution test trigger

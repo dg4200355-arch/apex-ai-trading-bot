@@ -36,6 +36,8 @@ jobs:
         run: PYTHONPATH=. python tools/portfolio_gate.py
       - name: Update shadow paper broker
         run: PYTHONPATH=. python tools/paper_broker.py
+      - name: Validate shadow broker accounting and risk invariants
+        run: PYTHONPATH=. python tools/broker_health.py
       - name: Upload paper-cycle reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,6 +61,8 @@ jobs:
           cp -f reports/paper_account.csv /tmp/apex-paper/
           cp -f reports/paper_positions.csv /tmp/apex-paper/
           cp -f reports/paper_broker.md /tmp/apex-paper/
+          cp -f reports/paper_broker_health.json /tmp/apex-paper/
+          cp -f reports/paper_broker_health.md /tmp/apex-paper/
           if [ -f reports/paper_orders.csv ]; then cp -f reports/paper_orders.csv /tmp/apex-paper/; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -66,7 +70,7 @@ jobs:
           git reset --hard origin/main
           mkdir -p reports
           cp -f /tmp/apex-paper/* reports/
-          git add reports/paper_state.json reports/paper_forward.csv reports/paper_forward.md reports/promotion_status.csv reports/promotion_status.md reports/portfolio_risk.csv reports/portfolio_risk.md reports/paper_broker_state.json reports/paper_account.csv reports/paper_positions.csv reports/paper_broker.md
+          git add reports/paper_state.json reports/paper_forward.csv reports/paper_forward.md reports/promotion_status.csv reports/promotion_status.md reports/portfolio_risk.csv reports/portfolio_risk.md reports/paper_broker_state.json reports/paper_account.csv reports/paper_positions.csv reports/paper_broker.md reports/paper_broker_health.json reports/paper_broker_health.md
           if [ -f reports/paper_orders.csv ]; then git add reports/paper_orders.csv; fi
           if git diff --cached --quiet; then
             echo "No paper-state changes"

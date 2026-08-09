@@ -1,4 +1,9 @@
-"""Central market-data download and OHLCV integrity checks for APEX."""
+"""Central market-data download and OHLCV integrity checks for APEX.
+
+Research/backtests use dividend/split-adjusted OHLC so indicators and historical
+returns are comparable. Shadow-broker executions use immutable raw trade prices;
+past fills must never be rewritten by a later dividend adjustment.
+"""
 from __future__ import annotations
 
 from typing import Optional
@@ -44,13 +49,7 @@ def apply_adj_close_factor(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFra
 
 
 def _repair_isolated_range_defects(d: pd.DataFrame, ticker: str) -> pd.DataFrame:
-    """Conservatively repair isolated High/Low defects without touching Open/Close.
-
-    Yahoo occasionally reports a few Korean bars where High/Low fail to envelope
-    Open/Close. Expanding only the range to include observed Open/Close is the
-    minimum conservative repair. A dataset is quarantined if defects are frequent
-    or any required expansion exceeds 5%.
-    """
+    """Conservatively repair isolated High/Low defects without touching Open/Close."""
     out = d.copy()
     true_high = out[["Open", "High", "Close"]].max(axis=1)
     true_low = out[["Open", "Low", "Close"]].min(axis=1)
@@ -124,7 +123,7 @@ def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
     return d
 
 
-def download_ohlcv(
+def _download_yahoo(
     ticker: str,
     *,
     period: Optional[str] = None,
@@ -145,6 +144,38 @@ def download_ohlcv(
         kwargs["start"] = start
     if end is not None:
         kwargs["end"] = end
-    raw = yf.download(**kwargs)
+    return yf.download(**kwargs)
+
+
+def download_ohlcv(
+    ticker: str,
+    *,
+    period: Optional[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> pd.DataFrame:
+    """Adjusted OHLCV for research, model features, and historical validation."""
+    raw = _download_yahoo(ticker, period=period, start=start, end=end)
     adjusted = apply_adj_close_factor(raw, ticker)
-    return normalize_ohlcv(adjusted, ticker)
+    out = normalize_ohlcv(adjusted, ticker)
+    out.attrs["price_basis"] = "ADJUSTED_RESEARCH"
+    return out
+
+
+def download_trade_ohlcv(
+    ticker: str,
+    *,
+    period: Optional[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> pd.DataFrame:
+    """Raw unadjusted OHLCV for paper fills and account valuation.
+
+    Historical raw opens/closes are stable execution prices. This prevents a later
+    dividend adjustment from rewriting an already-recorded paper fill.
+    """
+    raw = _download_yahoo(ticker, period=period, start=start, end=end)
+    d = _flatten_columns(raw)
+    out = normalize_ohlcv(d[REQUIRED].copy(), ticker)
+    out.attrs["price_basis"] = "RAW_EXECUTION"
+    return out

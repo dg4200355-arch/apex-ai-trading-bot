@@ -1,6 +1,6 @@
 """Autonomous real-market validation runner.
 
-Runs a compact Korea+US universe with the same v8 engine, applies
+Runs a compact Korea+US universe with the same validation engine, applies
 Benjamini-Hochberg multiple-testing control, and writes CSV/Markdown artifacts.
 No live orders are placed. A run with zero A-grade candidates is valid.
 """
@@ -12,6 +12,8 @@ import pandas as pd
 import yfinance as yf
 
 from engine import analyze_frame, make_features, run_self_tests
+
+ENGINE_VERSION = "8.2-next-open"
 
 KOREA = {
     "삼성전자":"005930.KS",
@@ -101,10 +103,11 @@ def main():
             result = analyze_frame(name, ticker, data, future=5, fee=.0015, fast_mode=True)
             result["시장"] = market_name
             result["실행시각UTC"] = run_at
+            result["엔진버전"] = ENGINE_VERSION
             rows.append(result)
             print(ticker, result.get("등급"), result.get("선택전략"), result.get("TEST수익"), result.get("탈락사유"))
         except Exception as e:
-            errors.append({"시장": market_name, "종목": name, "코드": ticker, "오류": repr(e), "실행시각UTC": run_at})
+            errors.append({"시장": market_name, "종목": name, "코드": ticker, "오류": repr(e), "실행시각UTC": run_at, "엔진버전": ENGINE_VERSION})
             print(ticker, "ERROR", repr(e))
 
     if not rows:
@@ -123,6 +126,7 @@ def main():
     lines = [
         "# APEX autonomous validation summary",
         "",
+        f"- engine_version: {ENGINE_VERSION}",
         f"- run_at_utc: {run_at}",
         f"- analyzed: {len(result)}",
         f"- A-grade passed: {len(strict)}",

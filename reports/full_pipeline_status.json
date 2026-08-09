@@ -1,8 +1,8 @@
 {
   "pipeline": "FULL80",
   "status": "success",
-  "at_utc": "2026-08-09T08:38:11+00:00",
-  "run_id": "31303856378",
-  "trigger_sha": "ebbcb463bc35a83341d27613ca33747a9f9524c6",
-  "event": "push"
+  "at_utc": "2026-08-09T22:00:01+00:00",
+  "run_id": "31338124423",
+  "trigger_sha": "334a5347523c676999dc33f95b33b0c78b90709d",
+  "event": "schedule"
 }

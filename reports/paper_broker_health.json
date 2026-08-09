@@ -1,0 +1,7 @@
+{
+  "version": "broker-health-1.0",
+  "ok": true,
+  "errors": [],
+  "broker_version": "paper-broker-1.1-risk-stop",
+  "accounts": 2
+}

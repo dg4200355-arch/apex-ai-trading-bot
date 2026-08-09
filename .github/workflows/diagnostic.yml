@@ -36,8 +36,6 @@ jobs:
             echo "- compile_exit: $COMPILE"
             echo "- tests_exit: $TESTS"
           } > reports/diagnostic.md 2>&1
-          echo "$COMPILE" > /tmp/compile_code
-          echo "$TESTS" > /tmp/test_code
           exit 0
       - name: Persist diagnostic
         run: |

@@ -2,10 +2,13 @@
 
 This gate never places orders. It prevents a historically attractive strategy
 from being labelled forward-validated until it has accumulated enough genuinely
-new market observations and completed paper trades.
+new market observations and completed paper trades. Forward candidates are also
+multiple-testing adjusted against each other so a growing candidate registry does
+not make accidental promotion easier.
 """
 from pathlib import Path
 import json
+from math import comb
 import numpy as np
 import pandas as pd
 
@@ -13,7 +16,7 @@ STATE = Path("reports/paper_state.json")
 LOG = Path("reports/paper_forward.csv")
 OUT = Path("reports/promotion_status.csv")
 SUMMARY = Path("reports/promotion_status.md")
-VERSION = "promotion-gate-1.1-bootstrap"
+VERSION = "promotion-gate-1.2-forward-bh"
 
 MIN_OBSERVATIONS = 60
 MIN_TRADES = 5
@@ -23,8 +26,8 @@ MIN_WINRATE = 0.40
 MIN_PF = 1.10
 EXTRA_ROUNDTRIP_COST = 0.003
 MIN_BOOTSTRAP_POSITIVE_PROB = 0.70
+MAX_FORWARD_SIGN_Q = 0.20
 
-# Fail-fast labels do not delete data or stop tracking. They only prevent promotion.
 FAIL_CHECK_OBSERVATIONS = 30
 FAIL_RETURN = -0.10
 FAIL_MDD = -0.15
@@ -63,6 +66,44 @@ def stress_compounded_return(returns):
     return float(np.prod(1 + stressed) - 1)
 
 
+def sign_test_pvalue(returns):
+    """One-sided exact sign test: H0 P(positive trade)=0.5 vs greater."""
+    x = np.asarray(returns, dtype=float)
+    x = x[np.isfinite(x)]
+    x = x[x != 0]
+    n = int(len(x))
+    if n < MIN_TRADES:
+        return np.nan
+    wins = int(np.sum(x > 0))
+    tail = sum(comb(n, k) for k in range(wins, n + 1))
+    return float(tail / (2 ** n))
+
+
+def bh_qvalues(values, family_size=None):
+    p = np.asarray(values, dtype=float)
+    q = np.full(len(p), np.nan)
+    valid = np.isfinite(p)
+    if not valid.any():
+        return q
+    pv = p[valid]
+    order = np.argsort(pv)
+    ranked = pv[order]
+    m = max(int(family_size or len(ranked)), len(ranked))
+    raw = ranked * m / np.arange(1, len(ranked) + 1)
+    adj = np.minimum.accumulate(raw[::-1])[::-1]
+    out = np.empty(len(ranked))
+    out[order] = np.clip(adj, 0, 1)
+    q[np.where(valid)[0]] = out
+    return q
+
+
+def latest_log_row(log: pd.DataFrame, ticker: str):
+    if log.empty or "코드" not in log.columns:
+        return pd.Series(dtype=object)
+    hit = log[log["코드"].astype(str) == str(ticker)]
+    return hit.iloc[-1] if not hit.empty else pd.Series(dtype=object)
+
+
 def main():
     Path("reports").mkdir(exist_ok=True)
     state = load_state()
@@ -74,14 +115,9 @@ def main():
     else:
         log = pd.DataFrame()
 
-    rows = []
+    metrics = []
     for ticker, s in state.items():
-        latest = pd.Series(dtype=object)
-        if not log.empty and "코드" in log.columns:
-            hit = log[log["코드"].astype(str) == str(ticker)]
-            if not hit.empty:
-                latest = hit.iloc[-1]
-
+        latest = latest_log_row(log, ticker)
         obs = int(s.get("observations", 0))
         trades = int(s.get("completed_trades", 0))
         wins = int(s.get("wins", 0))
@@ -92,8 +128,29 @@ def main():
         fwd = float(latest.get("전진누적수익", 0.0)) if len(latest) else 0.0
         mdd = float(s.get("forward_mdd", 0.0))
         trade_returns = list(s.get("trade_returns", []))
-        boot_prob = bootstrap_positive_probability(trade_returns)
-        stress_ret = stress_compounded_return(trade_returns)
+        metrics.append({
+            "ticker": ticker,
+            "state": s,
+            "latest": latest,
+            "obs": obs,
+            "trades": trades,
+            "wr": wr,
+            "pf": pf,
+            "fwd": fwd,
+            "mdd": mdd,
+            "stress_ret": stress_compounded_return(trade_returns),
+            "boot_prob": bootstrap_positive_probability(trade_returns),
+            "sign_p": sign_test_pvalue(trade_returns),
+        })
+
+    sign_q = bh_qvalues([m["sign_p"] for m in metrics], family_size=max(1, len(metrics)))
+    rows = []
+    for i, m in enumerate(metrics):
+        ticker, s, latest = m["ticker"], m["state"], m["latest"]
+        obs, trades, wr, pf = m["obs"], m["trades"], m["wr"], m["pf"]
+        fwd, mdd = m["fwd"], m["mdd"]
+        stress_ret, boot_prob, sign_p = m["stress_ret"], m["boot_prob"], m["sign_p"]
+        fq = float(sign_q[i]) if np.isfinite(sign_q[i]) else np.nan
 
         reasons = []
         if obs < MIN_OBSERVATIONS:
@@ -112,15 +169,12 @@ def main():
             reasons.append("비용스트레스")
         if trades >= MIN_TRADES and (not np.isfinite(boot_prob) or boot_prob < MIN_BOOTSTRAP_POSITIVE_PROB):
             reasons.append("부트스트랩")
+        if trades >= MIN_TRADES and (not np.isfinite(fq) or fq > MAX_FORWARD_SIGN_Q):
+            reasons.append("전진다중검정")
 
         failed = obs >= FAIL_CHECK_OBSERVATIONS and (fwd <= FAIL_RETURN or mdd <= FAIL_MDD)
         passed = (not failed) and len(reasons) == 0
-        if failed:
-            final_status = "전진실패"
-        elif passed:
-            final_status = "전진검증완료"
-        else:
-            final_status = "관찰중"
+        final_status = "전진실패" if failed else ("전진검증완료" if passed else "관찰중")
 
         rows.append({
             "승격가능": "✅" if passed else "❌",
@@ -136,6 +190,8 @@ def main():
             "PF": pf,
             "비용스트레스수익": stress_ret,
             "부트스트랩양수확률": boot_prob,
+            "방향성p": sign_p,
+            "전진다중검정q": fq,
             "현재포지션": latest.get("현재포지션", "-") if len(latest) else "-",
             "대기조건": "-" if passed else ("손실/MDD 중단기준" if failed else ", ".join(reasons)),
             "게이트": VERSION,
@@ -152,7 +208,8 @@ def main():
         f"- forward-validated: {len(passed)}",
         f"- forward-failed: {len(failed)}", "",
         "Promotion requires 60 new market observations, 5 completed paper trades, positive forward return,",
-        "controlled drawdown, minimum win/PF quality, doubled-cost stress resilience, and bootstrap support.",
+        "controlled drawdown, win/PF quality, doubled-cost stress resilience, bootstrap support,",
+        "and a forward trade-direction sign test adjusted across all tracked candidates.",
         "No status places orders or guarantees future returns.", "",
     ]
     if not result.empty:
@@ -160,10 +217,12 @@ def main():
         for _, r in result.iterrows():
             bp = r["부트스트랩양수확률"]
             bp_txt = "-" if not np.isfinite(bp) else f"{bp:.1%}"
+            fq = r["전진다중검정q"]
+            fq_txt = "-" if not np.isfinite(fq) else f"{fq:.3f}"
             lines.append(
                 f"- {r['최종상태']} {r['종목']} ({r['코드']}): obs={r['관측거래일']}, "
                 f"trades={r['완료거래']}, forward={r['전진누적수익']:.2%}, "
-                f"bootstrap={bp_txt}, waiting={r['대기조건']}"
+                f"bootstrap={bp_txt}, forward_q={fq_txt}, waiting={r['대기조건']}"
             )
     SUMMARY.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))

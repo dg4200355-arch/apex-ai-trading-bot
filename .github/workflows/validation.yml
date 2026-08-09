@@ -101,4 +101,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v8.6 final: full80 + frozen validation + forward evidence + portfolio concentration control
+# v8.6.1: cluster-leader selection inside high-correlation forward-validated groups

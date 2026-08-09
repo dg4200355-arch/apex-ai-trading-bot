@@ -7,5 +7,5 @@
 ## Latest
 
 - Chevron (CVX): date=2026-08-07, signal=대기, position=CASH, forward=0.00%, obs=1, update=NO_NEW_BAR
-- Visa (V): date=2026-08-07, signal=현금/청산, position=CASH, forward=0.00%, obs=1, update=NEW_BAR
-- Mastercard (MA): date=2026-08-07, signal=현금/청산, position=CASH, forward=0.00%, obs=1, update=NEW_BAR
+- Visa (V): date=2026-08-07, signal=대기, position=CASH, forward=0.00%, obs=1, update=NO_NEW_BAR
+- Mastercard (MA): date=2026-08-07, signal=대기, position=CASH, forward=0.00%, obs=1, update=NO_NEW_BAR

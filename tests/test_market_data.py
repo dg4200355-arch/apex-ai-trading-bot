@@ -30,9 +30,9 @@ def test_duplicate_dates_are_rejected():
 
 def test_small_adjusted_range_mismatch_is_tolerated():
     d = good_frame()
-    d.loc[d.index[1], "High"] = 100.7
-    d.loc[d.index[1], "Open"] = 101.0
-    assert (101.0 / 100.7 - 1) < RANGE_REL_TOL
+    d.loc[d.index[1], "High"] = 101.7
+    d.loc[d.index[1], "Close"] = 102.0
+    assert (102.0 / 101.7 - 1) < RANGE_REL_TOL
     out = normalize_ohlcv(d, "TEST")
     assert len(out) == 3
 

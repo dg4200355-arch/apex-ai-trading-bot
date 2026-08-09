@@ -1,22 +1,8 @@
 """Autonomous shadow paper broker for APEX.
 
-This module is downstream from validation. It NEVER sends live orders and its
-results NEVER feed back into candidate promotion. It consumes forward-tracker
-events and maintains virtual cash, whole-share positions, fees, slippage,
-correlation-cluster limits and account risk stops.
-
-Execution model
----------------
-- forward tracker decides at close t-1 and exposes resulting position at open t
-- broker mirrors a position transition at that same open t
-- buys require current FROZEN_VERIFIED admission
-- if verification is revoked while held, the position is forced flat at next open
-- buys use Open * (1 + slippage), sells use Open * (1 - slippage)
-- no leverage, no shorting, no historical backfill before broker initialization
-- one active position per correlation cluster
-- at most three active positions per market account
-- a 10% peak-to-equity drawdown permanently halts NEW buys; exits remain allowed
-- broker P/L is research-only and does not affect validation gates
+The broker is downstream from validation and NEVER sends live orders. Validation
+status is evaluated as-of each event date: a decision made using close t becomes
+effective only after t, preventing retroactive entry/exit at the same day's open.
 """
 from __future__ import annotations
 
@@ -40,9 +26,9 @@ ACCOUNT = Path("reports/paper_account.csv")
 POSITIONS = Path("reports/paper_positions.csv")
 SUMMARY = Path("reports/paper_broker.md")
 
-VERSION = "paper-broker-1.2-verification-exit"
+VERSION = "paper-broker-1.3-verification-timing"
 STATE_SCHEMA = 1
-TRACKER_PREFIX = "paper-forward-1.2"
+TRACKER_PREFIX = "paper-forward-1.3"
 STARTING_CAPITAL = {
     "KR": {"currency": "KRW", "cash": 10_000_000.0},
     "US": {"currency": "USD", "cash": 10_000.0},
@@ -193,8 +179,11 @@ def execute_buy(account: dict, ticker: str, market: str, cluster: str, open_pric
         "last_price": exec_price,
     }
     return {
-        "qty": qty, "price": exec_price, "fee": fee,
-        "realized_pnl": 0.0, "cash_after": account["cash"],
+        "qty": qty,
+        "price": exec_price,
+        "fee": fee,
+        "realized_pnl": 0.0,
+        "cash_after": account["cash"],
     }, None
 
 
@@ -214,8 +203,11 @@ def execute_sell(account: dict, ticker: str, open_price: float):
     account["completed_trades"] = int(account.get("completed_trades", 0)) + 1
     del account["positions"][ticker]
     return {
-        "qty": qty, "price": exec_price, "fee": fee,
-        "realized_pnl": realized, "cash_after": account["cash"],
+        "qty": qty,
+        "price": exec_price,
+        "fee": fee,
+        "realized_pnl": realized,
+        "cash_after": account["cash"],
     }, None
 
 
@@ -236,7 +228,12 @@ def price_on(cache: Dict[str, pd.DataFrame], ticker: str, date: str, field: str)
     return value
 
 
-def mark_account(account: dict, cache: Dict[str, pd.DataFrame], date: str, field: str = "Close") -> Tuple[float, float]:
+def mark_account(
+    account: dict,
+    cache: Dict[str, pd.DataFrame],
+    date: str,
+    field: str = "Close",
+) -> Tuple[float, float]:
     _ensure_account_schema(account)
     market_value = 0.0
     for ticker, pos in account.get("positions", {}).items():
@@ -274,8 +271,6 @@ def _valid_forward_events() -> pd.DataFrame:
         return pd.DataFrame()
     mask = df["업데이트"].astype(str).eq("NEW_BAR")
     mask &= df["트래커"].astype(str).str.startswith(TRACKER_PREFIX)
-    # Do NOT discard non-verified rows here. They are required to force an exit
-    # if verification is revoked while a shadow position is already open.
     out = df.loc[mask].copy()
     if out.empty:
         return out
@@ -292,23 +287,75 @@ def _initialize_event_watermarks(state: dict, candidate_state: Dict[str, dict]):
             marks[ticker] = str(s["last_signal_date"])
 
 
-def _order_row(now: str, date: str, market: str, ticker: str, side: str, status: str,
-               reason: str, cluster: str, qty=0, price=np.nan, fee=0.0,
-               realized_pnl=0.0, cash_after=np.nan):
+def _order_row(
+    now: str,
+    date: str,
+    market: str,
+    ticker: str,
+    side: str,
+    status: str,
+    reason: str,
+    cluster: str,
+    qty=0,
+    price=np.nan,
+    fee=0.0,
+    realized_pnl=0.0,
+    cash_after=np.nan,
+):
     return {
-        "시각UTC": now, "체결일": date, "시장": market, "코드": ticker,
-        "구분": side, "상태": status, "사유": reason, "상관군집": cluster,
-        "수량": qty, "체결가": price, "수수료": fee, "슬리피지": SLIPPAGE,
-        "실현손익": realized_pnl, "체결후현금": cash_after, "브로커": VERSION,
+        "시각UTC": now,
+        "체결일": date,
+        "시장": market,
+        "코드": ticker,
+        "구분": side,
+        "상태": status,
+        "사유": reason,
+        "상관군집": cluster,
+        "수량": qty,
+        "체결가": price,
+        "수수료": fee,
+        "슬리피지": SLIPPAGE,
+        "실현손익": realized_pnl,
+        "체결후현금": cash_after,
+        "브로커": VERSION,
     }
 
 
-def _is_verified(candidate_state: Dict[str, dict], ticker: str) -> bool:
+def _safe_date(value):
+    if value is None or value == "" or pd.isna(value):
+        return None
+    try:
+        return pd.Timestamp(str(value)).normalize()
+    except Exception:
+        return None
+
+
+def _is_verified_for_date(candidate_state: Dict[str, dict], ticker: str, date: str) -> bool:
+    """Return verification known before the open of event date."""
     cs = candidate_state.get(ticker, {})
-    return bool(cs.get("frozen_verified")) and not cs.get("quarantine_reason")
+    event_date = pd.Timestamp(date).normalize()
+    current_verified = bool(cs.get("frozen_verified")) and not cs.get("quarantine_reason")
+    effective_after = _safe_date(cs.get("verification_effective_after_date"))
+    revoked_after = _safe_date(cs.get("verification_revoked_after_date"))
+
+    if current_verified:
+        if effective_after is not None:
+            return event_date > effective_after
+        return True
+
+    # A recently revoked candidate remains valid through the revocation cutoff;
+    # the forced exit starts on the first event strictly after that date.
+    if revoked_after is not None and cs.get("verification_time_utc"):
+        return event_date <= revoked_after
+    return False
 
 
-def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str, dict], cluster_map: Dict[str, str]):
+def process_events(
+    state: dict,
+    events: pd.DataFrame,
+    candidate_state: Dict[str, dict],
+    cluster_map: Dict[str, str],
+):
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     cache: Dict[str, pd.DataFrame] = {}
     order_rows: List[dict] = []
@@ -339,12 +386,12 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
 
         mark_account(account, cache, date, "Open")
 
-        # Exits come first. A held candidate is forced flat if its frozen
-        # verification has been revoked, even when its original strategy remains LONG.
+        # Exits first. Verification revocation may force a next-session exit even
+        # when the frozen strategy itself remains LONG.
         for _, row in group.iterrows():
             ticker = str(row["코드"])
             desired_long = str(row["현재포지션"]).upper() == "LONG"
-            verified = _is_verified(candidate_state, ticker)
+            verified = _is_verified_for_date(candidate_state, ticker, date)
             must_exit = ticker in account.get("positions", {}) and ((not desired_long) or (not verified))
             if must_exit:
                 cluster = str(account["positions"][ticker].get("cluster", cluster_map.get(ticker, ticker)))
@@ -372,7 +419,7 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
 
         for _, ticker in entries:
             cluster = str(cluster_map.get(ticker, ticker))
-            verified = _is_verified(candidate_state, ticker)
+            verified = _is_verified_for_date(candidate_state, ticker, date)
             if not verified:
                 order_rows.append(_order_row(now, date, market, ticker, "BUY", "BLOCKED", "NOT_FROZEN_VERIFIED", cluster))
                 continue
@@ -399,15 +446,21 @@ def process_events(state: dict, events: pd.DataFrame, candidate_state: Dict[str,
         equity, market_value = mark_account(account, cache, date, "Close")
         initial = float(account.get("initial_cash", equity))
         account_rows.append({
-            "시각UTC": now, "기준일": date, "시장": market, "통화": account["currency"],
-            "현금": float(account["cash"]), "보유평가": market_value, "총자산": equity,
+            "시각UTC": now,
+            "기준일": date,
+            "시장": market,
+            "통화": account["currency"],
+            "현금": float(account["cash"]),
+            "보유평가": market_value,
+            "총자산": equity,
             "누적수익률": equity / initial - 1 if initial > 0 else np.nan,
             "최대낙폭": float(account.get("max_drawdown", 0.0)),
             "현재낙폭": account_drawdown(account),
             "신규매수중지": "⛔" if account.get("risk_halt") else "-",
             "보유종목수": len(account.get("positions", {})),
             "완료거래": int(account.get("completed_trades", 0)),
-            "실현손익": float(account.get("realized_pnl", 0.0)), "브로커": VERSION,
+            "실현손익": float(account.get("realized_pnl", 0.0)),
+            "브로커": VERSION,
         })
 
         for _, row in group.iterrows():
@@ -426,13 +479,23 @@ def current_positions_frame(state: dict) -> pd.DataFrame:
             qty = int(pos.get("qty", 0))
             last = float(pos.get("last_price", pos.get("entry_price", np.nan)))
             entry = float(pos.get("entry_price", np.nan))
-            unreal = qty * (last - entry) - float(pos.get("entry_fee", 0.0)) if np.isfinite(last) and np.isfinite(entry) else np.nan
+            unreal = (
+                qty * (last - entry) - float(pos.get("entry_fee", 0.0))
+                if np.isfinite(last) and np.isfinite(entry)
+                else np.nan
+            )
             rows.append({
-                "시장": market, "통화": account.get("currency"), "코드": ticker,
-                "상관군집": pos.get("cluster", ticker), "수량": qty,
-                "진입일": pos.get("entry_date", "-"), "평균진입가": entry,
-                "최근가격": last, "평가금액": qty * last if np.isfinite(last) else np.nan,
-                "미실현손익": unreal, "브로커": VERSION,
+                "시장": market,
+                "통화": account.get("currency"),
+                "코드": ticker,
+                "상관군집": pos.get("cluster", ticker),
+                "수량": qty,
+                "진입일": pos.get("entry_date", "-"),
+                "평균진입가": entry,
+                "최근가격": last,
+                "평가금액": qty * last if np.isfinite(last) else np.nan,
+                "미실현손익": unreal,
+                "브로커": VERSION,
             })
     return pd.DataFrame(rows, columns=POSITION_COLUMNS)
 
@@ -446,10 +509,20 @@ def initial_account_rows(state: dict, candidate_state: Dict[str, dict]) -> pd.Da
         _ensure_account_schema(a)
         initial = float(a["initial_cash"])
         rows.append({
-            "시각UTC": now, "기준일": date, "시장": market, "통화": a["currency"],
-            "현금": initial, "보유평가": 0.0, "총자산": initial, "누적수익률": 0.0,
-            "최대낙폭": 0.0, "현재낙폭": 0.0, "신규매수중지": "-",
-            "보유종목수": 0, "완료거래": 0, "실현손익": 0.0,
+            "시각UTC": now,
+            "기준일": date,
+            "시장": market,
+            "통화": a["currency"],
+            "현금": initial,
+            "보유평가": 0.0,
+            "총자산": initial,
+            "누적수익률": 0.0,
+            "최대낙폭": 0.0,
+            "현재낙폭": 0.0,
+            "신규매수중지": "-",
+            "보유종목수": 0,
+            "완료거래": 0,
+            "실현손익": 0.0,
             "브로커": VERSION,
         })
     return pd.DataFrame(rows)
@@ -457,7 +530,8 @@ def initial_account_rows(state: dict, candidate_state: Dict[str, dict]) -> pd.Da
 
 def write_summary(state: dict, orders_run: List[dict]):
     lines = [
-        "# APEX autonomous shadow paper broker", "",
+        "# APEX autonomous shadow paper broker",
+        "",
         f"- broker: {VERSION}",
         "- live orders: NEVER",
         f"- position sizing: {POSITION_FRACTION:.0%} max per entry",
@@ -465,9 +539,12 @@ def write_summary(state: dict, orders_run: List[dict]):
         f"- max positions per market: {MAX_POSITIONS_PER_MARKET}",
         f"- hard new-entry halt: {HARD_DRAWDOWN_HALT:.0%} from account peak",
         f"- fee/slippage each side: {FEE:.2%} / {SLIPPAGE:.2%}",
-        "- revoked verification forces next-open exit",
-        "- candidate promotion is independent from broker P/L", "",
-        "## Accounts", "",
+        "- verification changes take effect from the next market session",
+        "- revoked verification forces a next-session exit",
+        "- candidate promotion is independent from broker P/L",
+        "",
+        "## Accounts",
+        "",
     ]
     for market, a in state.get("accounts", {}).items():
         _ensure_account_schema(a)

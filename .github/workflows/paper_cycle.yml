@@ -79,4 +79,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v1.2: health-gated cycle with verification-revocation exits and shared concurrency lock
+# v1.3: next-session verification timing + health-gated broker + shared concurrency lock

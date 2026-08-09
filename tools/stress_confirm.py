@@ -6,7 +6,7 @@ cutoff, reconstructs the same test, checks reproducibility, and only then tries 
 break the frozen strategy with higher costs, nearby parameter perturbations, and a
 10-year historical regime stress ending at the same cutoff.
 
-No live orders are placed.
+All OHLCV passes centralized integrity checks. No live orders are placed.
 """
 from __future__ import annotations
 
@@ -16,9 +16,9 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
 
 from engine import build_rule_signal, fit_ai_predict, make_features, perf_from_signal
+from market_data import download_ohlcv
 
 REPORT = Path("reports/latest_validation.csv")
 OUT = Path("reports/latest_confirmation.csv")
@@ -34,24 +34,11 @@ ENGINE_VERSION = "8.5-frozen-confirm"
 
 def dl_dates(ticker: str, start: pd.Timestamp, cutoff: pd.Timestamp) -> pd.DataFrame:
     end = cutoff + pd.Timedelta(days=1)
-    d = yf.download(
+    d = download_ohlcv(
         ticker,
         start=start.date().isoformat(),
         end=end.date().isoformat(),
-        interval="1d",
-        auto_adjust=True,
-        progress=False,
-        threads=False,
     )
-    if d is None or d.empty:
-        raise RuntimeError(f"no data: {ticker}")
-    if isinstance(d.columns, pd.MultiIndex):
-        d.columns = d.columns.get_level_values(0)
-    d.columns = [str(c).title() for c in d.columns]
-    need = ["Open", "High", "Low", "Close", "Volume"]
-    if any(c not in d.columns for c in need):
-        raise RuntimeError(f"bad OHLCV: {ticker}")
-    d = d[need].dropna().sort_index()
     return d.loc[d.index <= cutoff]
 
 

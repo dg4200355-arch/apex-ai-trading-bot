@@ -40,7 +40,7 @@ jobs:
   autonomous-scan:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-scan]')
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,6 +50,8 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Run Korea + US autonomous validation
         run: PYTHONPATH=. python tools/autonomous_scan.py
+      - name: Run second-stage robustness confirmation
+        run: PYTHONPATH=. python tools/stress_confirm.py
       - name: Upload validation report
         if: always()
         uses: actions/upload-artifact@v4
@@ -65,16 +67,18 @@ jobs:
           cp -f reports/latest_validation.csv /tmp/apex-report/
           cp -f reports/latest_errors.json /tmp/apex-report/
           cp -f reports/latest_summary.md /tmp/apex-report/
+          cp -f reports/latest_confirmation.csv /tmp/apex-report/
+          cp -f reports/latest_confirmation.md /tmp/apex-report/
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
           git reset --hard origin/main
           mkdir -p reports
           cp -f /tmp/apex-report/* reports/
-          git add reports/latest_validation.csv reports/latest_errors.json reports/latest_summary.md
+          git add reports/latest_validation.csv reports/latest_errors.json reports/latest_summary.md reports/latest_confirmation.csv reports/latest_confirmation.md
           if git diff --cached --quiet; then
             echo "No report changes"
           else
-            git commit -m "chore: refresh autonomous validation report [skip ci]"
+            git commit -m "chore: refresh autonomous validation and confirmation report [skip ci]"
             git push origin HEAD:main
           fi

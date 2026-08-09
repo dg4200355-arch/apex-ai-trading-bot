@@ -1,0 +1,49 @@
+name: APEX diagnostics
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: contains(github.event.head_commit.message, '[run-diagnose]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - name: Run compile and focused tests, capture result
+        shell: bash
+        run: |
+          mkdir -p reports
+          set +e
+          {
+            echo "# APEX diagnostic"
+            echo
+            echo '```text'
+            python -m py_compile market_data.py engine.py streamlit_app.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/paper_broker.py tools/paper_broker_raw.py tools/paper_broker_safe.py tools/broker_health.py
+            COMPILE=$?
+            PYTHONPATH=. pytest -q tests/test_market_data.py tests/test_purged_freeze.py tests/test_paper_forward.py tests/test_paper_broker.py tests/test_raw_paper_broker.py tests/test_paper_broker_safe.py tests/test_broker_health.py
+            TESTS=$?
+            echo '```'
+            echo
+            echo "- compile_exit: $COMPILE"
+            echo "- tests_exit: $TESTS"
+          } > reports/diagnostic.md 2>&1
+          echo "$COMPILE" > /tmp/compile_code
+          echo "$TESTS" > /tmp/test_code
+          exit 0
+      - name: Persist diagnostic
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/diagnostic.md
+          git commit -m "chore: persist APEX diagnostic [skip ci]" || true
+          git pull --rebase origin main
+          git push origin HEAD:main

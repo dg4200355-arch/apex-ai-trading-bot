@@ -8,6 +8,10 @@ import pandas as pd
 import yfinance as yf
 
 REQUIRED = ["Open", "High", "Low", "Close", "Volume"]
+# yfinance auto-adjusted OHLC can contain small range mismatches from vendor
+# adjustment/rounding, especially on some Korean listings. 0.5% is tolerated;
+# larger inconsistencies are still rejected as corrupted bars.
+RANGE_REL_TOL = 0.005
 
 
 def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
@@ -32,16 +36,25 @@ def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
     d = d.replace([np.inf, -np.inf], np.nan).dropna()
     if len(d) < 2:
         raise ValueError(f"insufficient clean OHLCV: {ticker}")
+
     prices = d[["Open", "High", "Low", "Close"]]
     if (prices <= 0).any().any():
         raise ValueError(f"non-positive price: {ticker}")
     if (d["Volume"] < 0).any():
         raise ValueError(f"negative volume: {ticker}")
-    tol = 1e-10
-    if (d["High"] + tol < d[["Open", "Close", "Low"]].max(axis=1)).any():
+
+    # High must never be materially below Low.
+    if (d["High"] < d["Low"] * (1 - RANGE_REL_TOL)).any():
+        raise ValueError(f"high-low invariant failed: {ticker}")
+
+    # Open/Close may differ from adjusted High/Low by tiny vendor-rounding amounts.
+    upper = d["High"] * (1 + RANGE_REL_TOL)
+    lower = d["Low"] * (1 - RANGE_REL_TOL)
+    if ((d["Open"] > upper) | (d["Close"] > upper)).any():
         raise ValueError(f"high-price invariant failed: {ticker}")
-    if (d["Low"] - tol > d[["Open", "Close", "High"]].min(axis=1)).any():
+    if ((d["Open"] < lower) | (d["Close"] < lower)).any():
         raise ValueError(f"low-price invariant failed: {ticker}")
+
     if not d.index.is_monotonic_increasing:
         raise ValueError(f"non-monotonic market dates: {ticker}")
     return d

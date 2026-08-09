@@ -58,15 +58,23 @@ jobs:
           path: reports/
           if-no-files-found: warn
           retention-days: 14
-      - name: Persist latest report on main
+      - name: Persist latest report on newest main
         if: success()
         run: |
+          mkdir -p /tmp/apex-report
+          cp -f reports/latest_validation.csv /tmp/apex-report/
+          cp -f reports/latest_errors.json /tmp/apex-report/
+          cp -f reports/latest_summary.md /tmp/apex-report/
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+          mkdir -p reports
+          cp -f /tmp/apex-report/* reports/
           git add reports/latest_validation.csv reports/latest_errors.json reports/latest_summary.md
           if git diff --cached --quiet; then
             echo "No report changes"
           else
             git commit -m "chore: refresh autonomous validation report [skip ci]"
-            git push
+            git push origin HEAD:main
           fi

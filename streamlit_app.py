@@ -11,8 +11,8 @@ from engine import analyze_frame, make_features, run_self_tests
 
 EXPECTED_ENGINE_VERSION = "8.5-frozen-primary"
 CONFIRM_ENGINE_VERSION = "8.5-frozen-confirm"
-EXPECTED_TRACKER_VERSION = "paper-forward-1.1-replay"
-EXPECTED_GATE_VERSION = "promotion-gate-1.2-forward-bh"
+EXPECTED_TRACKER_VERSION = "paper-forward-1.2-frozen-admission"
+EXPECTED_GATE_VERSION = "promotion-gate-1.3-frozen-admission"
 
 st.set_page_config(page_title="APEX Autonomous Validation v8.5", page_icon="🧠", layout="wide")
 st.markdown(
@@ -34,7 +34,7 @@ st.markdown(
 
 KOREA = {
     "삼성전자":"005930.KS","SK하이닉스":"000660.KS","현대차":"005380.KS","기아":"000270.KS",
-    "NAVER":"035420.KS","카카오":"035720.KS","삼성바이오로직스":"207940.KS","셀트리온":"068270.KS",
+    "NAVER":"035720.KS" if False else "035420.KS","카카오":"035720.KS","삼성바이오로직스":"207940.KS","셀트리온":"068270.KS",
     "LG에너지솔루션":"373220.KS","POSCO홀딩스":"005490.KS","한화에어로스페이스":"012450.KS","HD현대중공업":"329180.KS",
     "KB금융":"105560.KS","신한지주":"055550.KS","하나금융지주":"086790.KS","우리금융지주":"316140.KS",
     "삼성물산":"028260.KS","삼성SDI":"006400.KS","LG화학":"051910.KS","LG전자":"066570.KS",
@@ -207,12 +207,12 @@ def show_paper_report():
         best=pd.to_numeric(latest.get("전진누적수익",pd.Series(dtype=float)),errors="coerce").max()
         c3.metric("최고 전진수익", pct(best))
         tracker=str(latest.get("트래커",pd.Series(["-"])).iloc[-1])
-        st.caption(f"트래커 {tracker} · 자동실행이 빠져도 마지막 처리일 이후 모든 새 거래일을 순서대로 재생합니다.")
+        st.caption(f"트래커 {tracker} · FROZEN_VERIFIED만 최종 승격 가능 · 누락 거래일 자동 재생")
         show=latest.copy()
         for col in ["승률","전진누적수익","전진MDD"]:
             if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(pct)
         if "PF" in show: show["PF"]=pd.to_numeric(show["PF"],errors="coerce").apply(lambda x:num(x,2))
-        cols=[c for c in ["종목","코드","전략","신호기준일","종가신호","현재포지션","관측거래일","완료거래","승률","PF","전진누적수익","전진MDD","업데이트","오류"] if c in show]
+        cols=[c for c in ["동결검증","종목","코드","전략","신호기준일","종가신호","현재포지션","관측거래일","완료거래","승률","PF","전진누적수익","전진MDD","업데이트","오류"] if c in show]
         st.dataframe(show[cols],use_container_width=True,hide_index=True)
 
 
@@ -234,7 +234,7 @@ def show_promotion_report():
         d2.metric("검증완료",f"{len(done)}개")
         d3.metric("관찰중",f"{len(waiting)}개")
         d4.metric("전진실패",f"{len(failed)}개")
-        st.caption(f"{gate} · 60거래일·5완료거래 + 비용스트레스 + 부트스트랩 + 방향성 sign-test + 후보 전체 BH 보정")
+        st.caption(f"{gate} · 동결재검증 + 60거래일·5완료거래 + 비용스트레스 + 부트스트랩 + 방향성 sign-test + 후보 BH 보정")
         if len(done):
             st.success("전진검증완료 종목이 있습니다. 이것도 자동 주문 신호가 아니라 추가 의사결정 자료입니다.")
         elif len(failed):
@@ -246,12 +246,12 @@ def show_promotion_report():
             if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(pct)
         for col in ["PF","방향성p","전진다중검정q"]:
             if col in show: show[col]=pd.to_numeric(show[col],errors="coerce").apply(lambda x:num(x,3))
-        cols=[c for c in ["승격가능","최종상태","종목","전략","관측거래일","완료거래","전진누적수익","전진MDD","승률","PF","비용스트레스수익","부트스트랩양수확률","방향성p","전진다중검정q","현재포지션","대기조건"] if c in show]
+        cols=[c for c in ["승격가능","최종상태","동결검증","종목","전략","관측거래일","완료거래","전진누적수익","전진MDD","승률","PF","비용스트레스수익","부트스트랩양수확률","방향성p","전진다중검정q","현재포지션","대기조건"] if c in show]
         st.dataframe(show[cols],use_container_width=True,hide_index=True)
 
 
 st.title("🧠 APEX Autonomous Validation v8.5")
-st.caption("80종목 전체 검정·전략동결 → 동일 파라미터 2차 재현/스트레스 → 누락일 복구형 전진모의 → 최종 통계 게이트")
+st.caption("80종목 전체 검정·전략동결 → 동일 파라미터 2차 재현/스트레스 → 동결재검증 전진모의 → 최종 통계 게이트")
 st.warning("연구·모의투자용입니다. 어떤 등급도 미래 수익을 보장하지 않으며 실계좌 주문 기능은 없습니다.")
 
 checks=run_self_tests()

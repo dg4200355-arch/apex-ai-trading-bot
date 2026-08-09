@@ -1,6 +1,10 @@
 name: APEX paper trading cycle
 
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'reports/**'
   workflow_dispatch:
   schedule:
     # 16:40 KST Monday-Friday = 07:40 UTC Monday-Friday
@@ -11,6 +15,7 @@ permissions:
 
 jobs:
   paper-cycle:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-paper]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:

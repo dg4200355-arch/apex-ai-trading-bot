@@ -16,7 +16,9 @@ from tools.paper_broker import (
 
 OUT = Path("reports/paper_broker_health.json")
 SUMMARY = Path("reports/paper_broker_health.md")
-VERSION = "broker-health-1.0"
+VERSION = "broker-health-1.1-raw-execution"
+EXPECTED_PRICE_BASIS = "RAW_EXECUTION"
+EXPECTED_BROKER_PREFIX = "paper-broker-1.4"
 
 
 def validate_state(state: dict, orders: pd.DataFrame | None = None):
@@ -25,6 +27,14 @@ def validate_state(state: dict, orders: pd.DataFrame | None = None):
         return ["state-not-dict"]
     if int(state.get("schema", -1)) != STATE_SCHEMA:
         errors.append("schema-mismatch")
+    if str(state.get("price_basis", "")) != EXPECTED_PRICE_BASIS:
+        errors.append("price-basis-not-raw-execution")
+    if not str(state.get("version", "")).startswith(EXPECTED_BROKER_PREFIX):
+        errors.append("broker-version-not-raw-execution")
+    actions = state.get("corporate_actions_applied", [])
+    if not isinstance(actions, list) or len(actions) != len(set(map(str, actions))):
+        errors.append("corporate-action-ledger-invalid")
+
     accounts = state.get("accounts", {})
     if not isinstance(accounts, dict) or not accounts:
         errors.append("accounts-missing")
@@ -36,15 +46,18 @@ def validate_state(state: dict, orders: pd.DataFrame | None = None):
             equity = float(account.get("last_equity", float("nan")))
             peak = float(account.get("peak_equity", float("nan")))
             max_dd = float(account.get("max_drawdown", 0.0))
+            dividends = float(account.get("dividend_income", 0.0))
         except Exception:
             errors.append(f"{market}:numeric-state")
             continue
-        if not all(math.isfinite(x) for x in [cash, equity, peak, max_dd]):
+        if not all(math.isfinite(x) for x in [cash, equity, peak, max_dd, dividends]):
             errors.append(f"{market}:nonfinite-state")
         if cash < -1e-6:
             errors.append(f"{market}:negative-cash")
         if equity <= 0 or peak <= 0:
             errors.append(f"{market}:nonpositive-equity")
+        if dividends < -1e-9:
+            errors.append(f"{market}:negative-dividend-income")
         positions = account.get("positions", {})
         if len(positions) > MAX_POSITIONS_PER_MARKET:
             errors.append(f"{market}:too-many-positions")
@@ -97,6 +110,7 @@ def main():
         "ok": len(errors) == 0,
         "errors": errors,
         "broker_version": state.get("version"),
+        "price_basis": state.get("price_basis"),
         "accounts": len(state.get("accounts", {})),
     }
     OUT.parent.mkdir(exist_ok=True)
@@ -105,6 +119,7 @@ def main():
         "# APEX shadow broker health", "",
         f"- health: {VERSION}",
         f"- broker: {state.get('version')}",
+        f"- price_basis: {state.get('price_basis')}",
         f"- ok: {result['ok']}",
         f"- errors: {len(errors)}",
     ]

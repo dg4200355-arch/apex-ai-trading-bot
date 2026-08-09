@@ -1,7 +1,8 @@
 {
-  "version": "broker-health-1.0",
+  "version": "broker-health-1.1-raw-execution",
   "ok": true,
   "errors": [],
-  "broker_version": "paper-broker-1.3-verification-timing",
+  "broker_version": "paper-broker-1.4-raw-execution",
+  "price_basis": "RAW_EXECUTION",
   "accounts": 2
 }

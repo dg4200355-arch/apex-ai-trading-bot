@@ -24,7 +24,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Compile Python entrypoints
-        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py
+        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py tools/portfolio_gate.py
       - run: PYTHONPATH=. pytest -q
 
   market-smoke:
@@ -61,6 +61,8 @@ jobs:
         run: PYTHONPATH=. python tools/paper_forward.py
       - name: Apply frozen-admission promotion gate
         run: PYTHONPATH=. python tools/promotion_gate.py
+      - name: Apply portfolio concentration gate
+        run: PYTHONPATH=. python tools/portfolio_gate.py
       - name: Upload validation report
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,18 +85,20 @@ jobs:
           cp -f reports/paper_forward.md /tmp/apex-report/
           cp -f reports/promotion_status.csv /tmp/apex-report/
           cp -f reports/promotion_status.md /tmp/apex-report/
+          cp -f reports/portfolio_risk.csv /tmp/apex-report/
+          cp -f reports/portfolio_risk.md /tmp/apex-report/
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
           git reset --hard origin/main
           mkdir -p reports
           cp -f /tmp/apex-report/* reports/
-          git add reports/latest_validation.csv reports/latest_errors.json reports/latest_summary.md reports/latest_confirmation.csv reports/latest_confirmation.md reports/paper_state.json reports/paper_forward.csv reports/paper_forward.md reports/promotion_status.csv reports/promotion_status.md
+          git add reports/latest_validation.csv reports/latest_errors.json reports/latest_summary.md reports/latest_confirmation.csv reports/latest_confirmation.md reports/paper_state.json reports/paper_forward.csv reports/paper_forward.md reports/promotion_status.csv reports/promotion_status.md reports/portfolio_risk.csv reports/portfolio_risk.md
           if git diff --cached --quiet; then
             echo "No report changes"
           else
-            git commit -m "chore: refresh v8.5 frozen validation reports [skip ci]"
+            git commit -m "chore: refresh v8.6 validation and portfolio risk reports [skip ci]"
             git push origin HEAD:main
           fi
 
-# v8.5: full80 + data integrity + exact parameter/data-window freeze + immutable confirmation + frozen-admission gate
+# v8.6: v8.5 frozen validation + portfolio correlation/concentration gate

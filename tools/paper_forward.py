@@ -1,11 +1,9 @@
 """Forward-only paper tracker with immutable admission verification.
 
-Once admitted, strategy family and parameters are frozen. Future runs process
-EVERY unseen completed market bar in chronological order. Legacy candidates keep
-their forward history, but they cannot be promoted until the current frozen stage-2
-engine re-confirms the exact same strategy family and exact same parameters.
-All downloaded OHLCV passes centralized integrity validation before state changes.
-No live orders are placed.
+Strategy family/parameters stay frozen after admission. Every unseen completed bar
+is replayed in order. A verification decision produced from data through close t is
+applied only after t, so it can affect execution from the next market session but
+never retroactively at open t. No live orders are placed.
 """
 from __future__ import annotations
 
@@ -20,13 +18,16 @@ import pandas as pd
 from engine import atr, build_rule_signal, ema, fit_ai_predict, make_features, rsi
 from market_data import download_ohlcv
 
+PRIMARY = Path("reports/latest_validation.csv")
 CONFIRM = Path("reports/latest_confirmation.csv")
 STATE_PATH = Path("reports/paper_state.json")
 LOG_PATH = Path("reports/paper_forward.csv")
 SUMMARY_PATH = Path("reports/paper_forward.md")
 FEE = 0.0015
-TRACKER_VERSION = "paper-forward-1.2-frozen-admission"
+TRACKER_VERSION = "paper-forward-1.3-verification-timing"
+EXPECTED_PRIMARY_ENGINE = "8.5-frozen-primary"
 EXPECTED_CONFIRM_ENGINE = "8.5-frozen-confirm"
+ELIGIBLE_PRIMARY_GRADES = {"A", "B", "관찰"}
 
 
 def dl(ticker: str, period: str = "2y") -> pd.DataFrame:
@@ -88,6 +89,15 @@ def load_log() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def load_csv(path: Path) -> pd.DataFrame:
+    if not path.exists() or not path.stat().st_size:
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path)
+    except Exception:
+        return pd.DataFrame()
+
+
 def normalized_params(obj) -> str:
     if isinstance(obj, str):
         obj = json.loads(obj)
@@ -98,7 +108,8 @@ def admission_matches(state_row: dict, confirmation_row: pd.Series) -> bool:
     try:
         return (
             str(state_row.get("전략")) == str(confirmation_row["전략"])
-            and normalized_params(state_row.get("전략파라미터", {})) == normalized_params(str(confirmation_row["전략파라미터"]))
+            and normalized_params(state_row.get("전략파라미터", {}))
+            == normalized_params(str(confirmation_row["전략파라미터"]))
         )
     except Exception:
         return False
@@ -160,7 +171,41 @@ def _verification_label(s: dict) -> str:
     return "FROZEN_VERIFIED" if bool(s.get("frozen_verified")) else "LEGACY_LOCKED"
 
 
-def replay_unseen_bars(s: dict, raw: pd.DataFrame, live: pd.DataFrame, signals: pd.Series, dates: Iterable[pd.Timestamp], now: str) -> List[dict]:
+def _status_row(s: dict, now: str, update: str, marked: float | None = None) -> dict:
+    trades = int(s.get("completed_trades", 0))
+    wins = int(s.get("wins", 0))
+    if marked is None:
+        marked = float(s.get("realized_equity", 1.0))
+    return {
+        "시각UTC": now,
+        "종목": s.get("종목", s.get("코드", "?")),
+        "코드": s.get("코드", "?"),
+        "시장": s.get("시장", "?"),
+        "전략": s.get("전략", "?"),
+        "동결검증": _verification_label(s),
+        "신호기준일": s.get("last_signal_date") or s.get("registered_market_date") or "-",
+        "종가신호": "인증상태변경" if update == "VERIFICATION_UPDATE" else "대기",
+        "현재포지션": "LONG" if s.get("position") else "CASH",
+        "진입일": s.get("entry_date") or "-",
+        "관측거래일": int(s.get("observations", 0)),
+        "완료거래": trades,
+        "승률": wins / trades if trades else np.nan,
+        "PF": _trade_pf(s),
+        "전진누적수익": float(marked) - 1,
+        "전진MDD": float(s.get("forward_mdd", 0.0)),
+        "업데이트": update,
+        "트래커": TRACKER_VERSION,
+    }
+
+
+def replay_unseen_bars(
+    s: dict,
+    raw: pd.DataFrame,
+    live: pd.DataFrame,
+    signals: pd.Series,
+    dates: Iterable[pd.Timestamp],
+    now: str,
+) -> List[dict]:
     rows: List[dict] = []
     for date in [pd.Timestamp(x) for x in dates]:
         if date not in raw.index or date not in live.index:
@@ -178,17 +223,10 @@ def replay_unseen_bars(s: dict, raw: pd.DataFrame, live: pd.DataFrame, signals: 
         s["max_mark_equity"] = peak
         dd = marked / peak - 1 if peak > 0 else 0.0
         s["forward_mdd"] = min(float(s.get("forward_mdd", 0.0)), dd)
-        trades = int(s.get("completed_trades", 0))
-        wins = int(s.get("wins", 0))
-        rows.append({
-            "시각UTC": now, "종목": s.get("종목", "?"), "코드": s.get("코드", "?"),
-            "시장": s.get("시장", "?"), "전략": s.get("전략", "?"), "동결검증": _verification_label(s),
-            "신호기준일": date_str, "종가신호": "보유/진입" if signal else "현금/청산",
-            "현재포지션": "LONG" if s.get("position") else "CASH", "진입일": s.get("entry_date") or "-",
-            "관측거래일": int(s.get("observations", 0)), "완료거래": trades,
-            "승률": wins / trades if trades else np.nan, "PF": _trade_pf(s), "전진누적수익": marked - 1,
-            "전진MDD": float(s.get("forward_mdd", 0.0)), "업데이트": "NEW_BAR", "트래커": TRACKER_VERSION,
-        })
+        row = _status_row(s, now, "NEW_BAR", marked)
+        row["신호기준일"] = date_str
+        row["종가신호"] = "보유/진입" if signal else "현금/청산"
+        rows.append(row)
     return rows
 
 
@@ -211,44 +249,52 @@ def _build_signal_series(ticker: str, market_code: str, s: dict) -> Tuple[pd.Dat
         raise RuntimeError("frozen AI training history unavailable")
     p = fit_ai_predict(train, live, True)
     probs = pd.Series(p, index=live.index)
-    signals = (probs >= float(params["threshold"])) & (live["Close"] > live["ema55"]) & live["rsi"].between(45, 78)
+    signals = (
+        (probs >= float(params["threshold"]))
+        & (live["Close"] > live["ema55"])
+        & live["rsi"].between(45, 78)
+    )
     return raw, live, signals.astype(bool)
 
 
 def _new_state(row: pd.Series, latest_date: pd.Timestamp, now: str) -> dict:
     params = json.loads(str(row["전략파라미터"]))
-    confirm_engine = str(row.get("확인엔진", "legacy"))
-    verified = confirm_engine == EXPECTED_CONFIRM_ENGINE
+    cutoff = str(row.get("1차데이터기준일", latest_date.date().isoformat()))
     return {
-        "종목": str(row["종목"]), "코드": str(row["코드"]), "시장": str(row["시장"]),
-        "전략": str(row["전략"]), "전략파라미터": params, "등록시각UTC": now,
+        "종목": str(row["종목"]),
+        "코드": str(row["코드"]),
+        "시장": str(row["시장"]),
+        "전략": str(row["전략"]),
+        "전략파라미터": params,
+        "등록시각UTC": now,
         "registered_market_date": latest_date.date().isoformat(),
-        "model_cutoff": str(row.get("1차데이터기준일", latest_date.date().isoformat())),
-        "admission_engine": confirm_engine, "frozen_verified": verified,
-        "verification_time_utc": now if verified else None,
-        "quarantine_reason": None if verified else "awaiting frozen confirmation",
-        "position": False, "entry_price": None, "entry_date": None, "pending_date": None, "pending_signal": None,
-        "realized_equity": 1.0, "completed_trades": 0, "wins": 0, "gross_profit": 0.0, "gross_loss": 0.0,
-        "trade_returns": [], "max_mark_equity": 1.0, "forward_mdd": 0.0, "observations": 0,
-        "last_signal_date": None, "tracker_version": TRACKER_VERSION,
+        "model_cutoff": cutoff,
+        "admission_engine": None,
+        "frozen_verified": False,
+        "verification_time_utc": None,
+        "verification_effective_after_date": None,
+        "verification_revoked_after_date": None,
+        "quarantine_reason": "awaiting frozen confirmation",
+        "position": False,
+        "entry_price": None,
+        "entry_date": None,
+        "pending_date": None,
+        "pending_signal": None,
+        "realized_equity": 1.0,
+        "completed_trades": 0,
+        "wins": 0,
+        "gross_profit": 0.0,
+        "gross_loss": 0.0,
+        "trade_returns": [],
+        "max_mark_equity": 1.0,
+        "forward_mdd": 0.0,
+        "observations": 0,
+        "last_signal_date": None,
+        "tracker_version": TRACKER_VERSION,
     }
 
 
-def _refresh_admission_verification(s: dict, row: pd.Series, now: str):
-    engine = str(row.get("확인엔진", "legacy"))
-    if engine != EXPECTED_CONFIRM_ENGINE:
-        return
-    if admission_matches(s, row):
-        s["frozen_verified"] = True
-        s["verification_time_utc"] = now
-        s["admission_engine"] = engine
-        s["quarantine_reason"] = None
-    else:
-        s["frozen_verified"] = False
-        s["quarantine_reason"] = "frozen confirmation parameters differ from admitted strategy"
-
-
-def process_candidate(state: Dict[str, dict], row: pd.Series, current_confirmation: bool = False) -> List[dict]:
+def process_candidate(state: Dict[str, dict], row: pd.Series) -> List[dict]:
     ticker = str(row["코드"])
     market_name = str(row["시장"])
     market_code = "^KS11" if market_name == "KR" else "SPY"
@@ -267,9 +313,12 @@ def process_candidate(state: Dict[str, dict], row: pd.Series, current_confirmati
     s.setdefault("model_cutoff", s.get("registered_market_date") or s.get("last_signal_date"))
     s.setdefault("frozen_verified", False)
     s.setdefault("quarantine_reason", "legacy admission awaiting frozen confirmation")
+    s.setdefault("verification_effective_after_date", s.get("model_cutoff") if s.get("frozen_verified") else None)
+    s.setdefault("verification_revoked_after_date", None)
+    if s.get("frozen_verified") and not s.get("verification_effective_after_date"):
+        s["verification_effective_after_date"] = s.get("model_cutoff") or s.get("registered_market_date")
     s["tracker_version"] = TRACKER_VERSION
-    if current_confirmation:
-        _refresh_admission_verification(s, row, now)
+
     raw, live, signals = _build_signal_series(ticker, market_code, s)
     last = s.get("last_signal_date")
     if last is None:
@@ -281,70 +330,195 @@ def process_candidate(state: Dict[str, dict], row: pd.Series, current_confirmati
         return replay_unseen_bars(s, raw, live, signals, dates, now)
     latest_date = pd.Timestamp(live.index[-1])
     latest_close = float(raw.loc[latest_date, "Close"])
-    marked = mark_equity(s, latest_close)
-    trades = int(s.get("completed_trades", 0))
-    wins = int(s.get("wins", 0))
-    return [{
-        "시각UTC": now, "종목": s.get("종목", ticker), "코드": ticker, "시장": s.get("시장", market_name),
-        "전략": s.get("전략", "?"), "동결검증": _verification_label(s),
-        "신호기준일": s.get("last_signal_date") or latest_date.date().isoformat(), "종가신호": "대기",
-        "현재포지션": "LONG" if s.get("position") else "CASH", "진입일": s.get("entry_date") or "-",
-        "관측거래일": int(s.get("observations", 0)), "완료거래": trades,
-        "승률": wins / trades if trades else np.nan, "PF": _trade_pf(s), "전진누적수익": marked - 1,
-        "전진MDD": float(s.get("forward_mdd", 0.0)), "업데이트": "NO_NEW_BAR", "트래커": TRACKER_VERSION,
-    }]
+    return [_status_row(s, now, "NO_NEW_BAR", mark_equity(s, latest_close))]
+
+
+def _row_cutoff(row: pd.Series | None, fallback: str | None = None) -> str | None:
+    if row is None:
+        return fallback
+    value = row.get("데이터기준일", fallback)
+    if value is None or pd.isna(value):
+        return fallback
+    try:
+        return pd.Timestamp(str(value)).date().isoformat()
+    except Exception:
+        return fallback
+
+
+def reconcile_verifications(
+    state: Dict[str, dict],
+    primary: pd.DataFrame,
+    confirmation: pd.DataFrame,
+    now: str,
+) -> List[dict]:
+    """Reconcile current stage-2 status after all bars through its cutoff were replayed."""
+    if primary.empty or "코드" not in primary.columns or "최종등급" not in primary.columns:
+        return []
+    if "엔진버전" in primary.columns and not primary["엔진버전"].astype(str).eq(EXPECTED_PRIMARY_ENGINE).all():
+        return []
+
+    primary_map = {str(r["코드"]): r for _, r in primary.iterrows()}
+    confirm_map = (
+        {str(r["코드"]): r for _, r in confirmation.iterrows()}
+        if not confirmation.empty and "코드" in confirmation.columns
+        else {}
+    )
+    global_cutoff = None
+    if "데이터기준일" in primary.columns:
+        vals = pd.to_datetime(primary["데이터기준일"], errors="coerce").dropna()
+        if not vals.empty:
+            global_cutoff = vals.max().date().isoformat()
+
+    rows: List[dict] = []
+    for ticker, s in state.items():
+        before_verified = bool(s.get("frozen_verified"))
+        before_reason = s.get("quarantine_reason")
+        before_effective = s.get("verification_effective_after_date")
+        before_revoked = s.get("verification_revoked_after_date")
+        prow = primary_map.get(str(ticker))
+        cutoff = _row_cutoff(prow, global_cutoff) if prow is not None else global_cutoff
+
+        verified_now = False
+        reason = None
+        if prow is None:
+            reason = "not present in current primary validation snapshot"
+        elif str(prow.get("최종등급")) not in ELIGIBLE_PRIMARY_GRADES:
+            reason = "no longer in current stage-2 candidate set"
+        else:
+            crow = confirm_map.get(str(ticker))
+            if crow is None:
+                reason = "current stage-2 confirmation missing"
+            elif str(crow.get("확인엔진", "legacy")) != EXPECTED_CONFIRM_ENGINE:
+                reason = "current stage-2 confirmation engine mismatch"
+            elif str(crow.get("2차통과", "❌")) != "✅":
+                reason = f"current stage-2 confirmation failed: {crow.get('보류사유', 'stage-2 failed')}"
+            elif not admission_matches(s, crow):
+                reason = "frozen confirmation parameters differ from admitted strategy"
+            else:
+                verified_now = True
+
+        if verified_now:
+            s["frozen_verified"] = True
+            s["quarantine_reason"] = None
+            s["admission_engine"] = EXPECTED_CONFIRM_ENGINE
+            s["verification_revoked_after_date"] = None
+            if not before_verified:
+                s["verification_time_utc"] = now
+                s["verification_effective_after_date"] = cutoff
+            elif not s.get("verification_effective_after_date"):
+                s["verification_effective_after_date"] = s.get("model_cutoff") or cutoff
+        else:
+            s["frozen_verified"] = False
+            s["quarantine_reason"] = reason
+            # Only a candidate that was actually verified can have a revocation
+            # window in which earlier opens remain valid.
+            if before_verified:
+                s["verification_revoked_after_date"] = cutoff
+
+        changed = (
+            before_verified != bool(s.get("frozen_verified"))
+            or before_reason != s.get("quarantine_reason")
+            or before_effective != s.get("verification_effective_after_date")
+            or before_revoked != s.get("verification_revoked_after_date")
+        )
+        if changed:
+            rows.append(_status_row(s, now, "VERIFICATION_UPDATE"))
+    return rows
 
 
 def main():
     Path("reports").mkdir(exist_ok=True)
     state = load_state()
     old_log = load_log()
+    primary = load_csv(PRIMARY)
+    confirmation = load_csv(CONFIRM)
     rows: List[dict] = []
-    if CONFIRM.exists():
-        try:
-            confirmation = pd.read_csv(CONFIRM)
-        except Exception:
-            confirmation = pd.DataFrame()
-    else:
-        confirmation = pd.DataFrame()
-    if not confirmation.empty and "2차통과" in confirmation.columns:
-        admitted = confirmation[confirmation["2차통과"] == "✅"]
+
+    # Current confirmed rows can introduce new candidates, but new admission is
+    # not effective at the same day's open. Reconciliation happens after replay.
+    if not confirmation.empty and {"2차통과", "코드"}.issubset(confirmation.columns):
+        admitted = confirmation[
+            (confirmation["2차통과"].astype(str) == "✅")
+            & (
+                confirmation.get("확인엔진", pd.Series("legacy", index=confirmation.index)).astype(str)
+                == EXPECTED_CONFIRM_ENGINE
+            )
+        ]
         for _, row in admitted.iterrows():
             try:
-                rows.extend(process_candidate(state, row, current_confirmation=True))
+                rows.extend(process_candidate(state, row))
             except Exception as e:
-                rows.append({"시각UTC": datetime.now(timezone.utc).isoformat(timespec="seconds"), "종목": row.get("종목", "?"),
-                             "코드": row.get("코드", "?"), "시장": row.get("시장", "?"), "전략": row.get("전략", "?"),
-                             "오류": repr(e), "업데이트": "ERROR", "트래커": TRACKER_VERSION})
+                rows.append({
+                    "시각UTC": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "종목": row.get("종목", "?"),
+                    "코드": row.get("코드", "?"),
+                    "시장": row.get("시장", "?"),
+                    "전략": row.get("전략", "?"),
+                    "오류": repr(e),
+                    "업데이트": "ERROR",
+                    "트래커": TRACKER_VERSION,
+                })
+
     touched = {str(r.get("코드")) for r in rows if r.get("코드")}
     for ticker, s in list(state.items()):
         if ticker in touched:
             continue
-        pseudo = pd.Series({"종목": s["종목"], "코드": ticker, "시장": s["시장"], "전략": s["전략"],
-                            "전략파라미터": json.dumps(s["전략파라미터"], ensure_ascii=False)})
+        pseudo = pd.Series({
+            "종목": s["종목"],
+            "코드": ticker,
+            "시장": s["시장"],
+            "전략": s["전략"],
+            "전략파라미터": json.dumps(s["전략파라미터"], ensure_ascii=False),
+        })
         try:
-            rows.extend(process_candidate(state, pseudo, current_confirmation=False))
+            rows.extend(process_candidate(state, pseudo))
         except Exception as e:
-            rows.append({"시각UTC": datetime.now(timezone.utc).isoformat(timespec="seconds"), "종목": s.get("종목", "?"),
-                         "코드": ticker, "시장": s.get("시장", "?"), "전략": s.get("전략", "?"), "오류": repr(e),
-                         "업데이트": "ERROR", "트래커": TRACKER_VERSION})
+            rows.append({
+                "시각UTC": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                "종목": s.get("종목", "?"),
+                "코드": ticker,
+                "시장": s.get("시장", "?"),
+                "전략": s.get("전략", "?"),
+                "오류": repr(e),
+                "업데이트": "ERROR",
+                "트래커": TRACKER_VERSION,
+            })
+
+    reconcile_now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    rows.extend(reconcile_verifications(state, primary, confirmation, reconcile_now))
+
     save_state(state)
     new = pd.DataFrame(rows)
-    combined = pd.concat([old_log, new], ignore_index=True) if (not old_log.empty and not new.empty) else (new if not new.empty else old_log)
+    combined = (
+        pd.concat([old_log, new], ignore_index=True)
+        if (not old_log.empty and not new.empty)
+        else (new if not new.empty else old_log)
+    )
     combined.to_csv(LOG_PATH, index=False, encoding="utf-8-sig")
+
     verified = sum(bool(s.get("frozen_verified")) for s in state.values())
-    lines = ["# APEX forward-only paper tracker", "", f"- tracker: {TRACKER_VERSION}",
-             f"- frozen candidates tracked: {len(state)}", f"- frozen-confirm verified: {verified}",
-             f"- rows written this run: {len(new)}", ""]
+    quarantined = len(state) - verified
+    lines = [
+        "# APEX forward-only paper tracker",
+        "",
+        f"- tracker: {TRACKER_VERSION}",
+        f"- frozen candidates tracked: {len(state)}",
+        f"- frozen-confirm verified: {verified}",
+        f"- quarantined/locked: {quarantined}",
+        f"- rows written this run: {len(new)}",
+        "",
+    ]
     if not new.empty:
         lines += ["## Latest", ""]
-        for _, r in new.tail(20).iterrows():
+        for _, r in new.tail(30).iterrows():
             if pd.notna(r.get("오류")):
                 lines.append(f"- ERROR {r.get('종목')} ({r.get('코드')}): {r.get('오류')}")
             else:
-                lines.append(f"- {r['종목']} ({r['코드']}): verify={r.get('동결검증')}, date={r['신호기준일']}, "
-                             f"signal={r['종가신호']}, position={r['현재포지션']}, forward={float(r['전진누적수익']):.2%}, "
-                             f"obs={int(r['관측거래일'])}, update={r['업데이트']}")
+                lines.append(
+                    f"- {r['종목']} ({r['코드']}): verify={r.get('동결검증')}, date={r['신호기준일']}, "
+                    f"signal={r['종가신호']}, position={r['현재포지션']}, "
+                    f"forward={float(r['전진누적수익']):.2%}, obs={int(r['관측거래일'])}, update={r['업데이트']}"
+                )
     SUMMARY_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
 

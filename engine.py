@@ -92,26 +92,43 @@ def make_features(raw: pd.DataFrame, market: pd.DataFrame, future: int = 5, targ
     return d.replace([np.inf, -np.inf], np.nan).dropna()
 
 
+def _execution_returns(d: pd.DataFrame) -> pd.Series:
+    """Realizable P&L after a close signal is executed at the next open."""
+    px = d["Open"].astype(float) if "Open" in d.columns else d["Close"].astype(float)
+    fwd = px.shift(-1) / px - 1
+    if len(fwd):
+        if "Open" in d.columns and "Close" in d.columns and float(d["Open"].iloc[-1]) != 0:
+            fwd.iloc[-1] = float(d["Close"].iloc[-1] / d["Open"].iloc[-1] - 1)
+        else:
+            fwd.iloc[-1] = 0.0
+    return fwd.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+
 def signal_components(d: pd.DataFrame, raw_signal: pd.Series, fee: float = 0.0015):
     sig = pd.Series(raw_signal, index=d.index).reindex(d.index).fillna(False).astype(bool)
     pos = sig.shift(1, fill_value=False).astype(float)
-    daily = d["Close"].pct_change().fillna(0.0)
+    realized = _execution_returns(d)
     turns = pos.diff().abs().fillna(pos.abs())
-    strat = pos * daily - turns * fee
-    return sig, pos, daily, turns, strat
+    if len(turns) and pos.iloc[-1] > 0:
+        turns.iloc[-1] += 1.0
+    strat = pos * realized - turns * fee
+    return sig, pos, realized, turns, strat
 
 
 def timing_pvalue(d: pd.DataFrame, raw_signal: pd.Series, fee: float = 0.0015, permutations: int = 120, seed: int = 2026) -> float:
     if d.empty:
         return 1.0
-    _, pos, daily, turns, strat = signal_components(d, raw_signal, fee)
+    _, pos, realized, turns, strat = signal_components(d, raw_signal, fee)
     actual = float((1 + strat).prod() - 1)
-    vals = daily.to_numpy(copy=True)
+    vals = realized.to_numpy(copy=True)
+    if len(vals) < 3:
+        return 1.0
     rng = np.random.default_rng(seed)
     ge = 0
     for _ in range(permutations):
-        perm = rng.permutation(vals)
-        r = pos.to_numpy() * perm - turns.to_numpy() * fee
+        shift = int(rng.integers(1, len(vals)))
+        shifted = np.roll(vals, shift)
+        r = pos.to_numpy() * shifted - turns.to_numpy() * fee
         sim = float(np.prod(1 + r) - 1)
         ge += sim >= actual
     return float((ge + 1) / (permutations + 1))
@@ -120,10 +137,12 @@ def timing_pvalue(d: pd.DataFrame, raw_signal: pd.Series, fee: float = 0.0015, p
 def perf_from_signal(d: pd.DataFrame, raw_signal: pd.Series, fee: float = 0.0015) -> Perf:
     if d.empty:
         return Perf(0.0, 0.0, 0, np.nan, np.nan, 0.0)
-    sig, pos, daily, turns, strat = signal_components(d, raw_signal, fee)
+    _, pos, _, _, strat = signal_components(d, raw_signal, fee)
     equity = (1 + strat).cumprod()
     total = float(equity.iloc[-1] - 1)
-    mdd = float((equity / equity.cummax() - 1).min())
+    eq = np.r_[1.0, equity.to_numpy(dtype=float)]
+    peaks = np.maximum.accumulate(eq)
+    mdd = float(np.min(eq / peaks - 1))
     sharpe = float(np.sqrt(252) * strat.mean() / strat.std()) if len(strat) > 5 and strat.std() > 0 else 0.0
     entries = pos.diff().fillna(pos) == 1
     exits = pos.diff().fillna(0) == -1
@@ -133,7 +152,7 @@ def perf_from_signal(d: pd.DataFrame, raw_signal: pd.Series, fee: float = 0.0015
         if bool(entries.iloc[i]) and start_idx is None:
             start_idx = i
         if start_idx is not None and (bool(exits.iloc[i]) or i == len(d) - 1):
-            seg = strat.iloc[start_idx : i + 1]
+            seg = strat.iloc[start_idx:i + 1]
             trade_returns.append(float((1 + seg).prod() - 1))
             start_idx = None
     trades = len(trade_returns)
@@ -203,7 +222,7 @@ def _segment_perf(pretest: pd.DataFrame, sig: pd.Series, fee: float, segments: i
     edges = np.linspace(start, n, segments + 1, dtype=int)
     perfs: List[Perf] = []
     for i in range(segments):
-        seg = pretest.iloc[edges[i] : edges[i + 1]]
+        seg = pretest.iloc[edges[i]:edges[i + 1]]
         if len(seg) < 40:
             continue
         perfs.append(perf_from_signal(seg, sig.reindex(seg.index), fee))
@@ -315,7 +334,10 @@ def analyze_frame(name: str, ticker: str, data: pd.DataFrame, future: int = 5, f
     test_perf = perf_from_signal(test, test_sig, fee)
     ntest = len(test)
     edges = np.linspace(0, ntest, 4, dtype=int)
-    test_sub = [perf_from_signal(test.iloc[edges[i]:edges[i+1]], test_sig.reindex(test.iloc[edges[i]:edges[i+1]].index), fee) for i in range(3)]
+    test_sub = [
+        perf_from_signal(test.iloc[edges[i]:edges[i + 1]], test_sig.reindex(test.iloc[edges[i]:edges[i + 1]].index), fee)
+        for i in range(3)
+    ]
     test_positive_ratio = float(np.mean([p.ret > 0 for p in test_sub]))
     test_median_return = float(np.median([p.ret for p in test_sub]))
     timing_p = timing_pvalue(test, test_sig, fee, permutations=80 if fast_mode else 200)
@@ -360,6 +382,7 @@ def analyze_frame(name: str, ticker: str, data: pd.DataFrame, future: int = 5, f
     else:
         grade = "탈락"
     passed = grade == "A"
+
     score = (
         choice.validation_median_return * 20
         + choice.validation_positive_ratio * 2
@@ -405,12 +428,13 @@ def synthetic_ohlcv(seed: int = 42, n: int = 1400, regime: str = "random") -> pd
         x = np.zeros(n)
         for i in range(1, n):
             x[i] = 0.94 * x[i - 1] + rng.normal(0, 0.012)
-        close = 100 * np.exp(x + np.linspace(0, 0.15, n))
-        r = np.r_[0, np.diff(np.log(close))]
+        close0 = 100 * np.exp(x + np.linspace(0, 0.15, n))
+        r = np.r_[0, np.diff(np.log(close0))]
     else:
         r = rng.normal(0.0001, 0.012, n)
     close = 100 * np.exp(np.cumsum(r))
-    open_ = close * (1 + rng.normal(0, 0.002, n))
+    gap = rng.normal(0, 0.002, n)
+    open_ = np.r_[close[0], close[:-1]] * (1 + gap)
     high = np.maximum(open_, close) * (1 + np.abs(rng.normal(0, 0.004, n)))
     low = np.minimum(open_, close) * (1 - np.abs(rng.normal(0, 0.004, n)))
     volume = rng.integers(200_000, 2_000_000, n)
@@ -422,11 +446,20 @@ def run_self_tests() -> Dict[str, bool]:
     out: Dict[str, bool] = {}
     idx = pd.date_range("2024-01-01", periods=100, freq="B")
     close = np.linspace(100, 140, len(idx))
-    d = pd.DataFrame({"Close": close}, index=idx)
+    open_ = np.r_[close[0], close[:-1]]
+    d = pd.DataFrame({"Open": open_, "Close": close}, index=idx)
     p0 = perf_from_signal(d, pd.Series(False, index=idx))
     out["no_signal_zero_return"] = abs(p0.ret) < 1e-12 and p0.trades == 0
     p1 = perf_from_signal(d, pd.Series(True, index=idx), fee=0.0)
-    out["next_bar_positive_trend"] = p1.ret > 0 and p1.mdd <= 1e-12
+    out["next_open_positive_trend"] = p1.ret > 0 and p1.mdd <= 1e-12
+
+    dgap = pd.DataFrame(
+        {"Open": [100.0, 200.0, 200.0, 200.0], "Close": [100.0, 200.0, 200.0, 200.0]},
+        index=pd.date_range("2025-01-01", periods=4, freq="B"),
+    )
+    sgap = pd.Series([True, True, False, False], index=dgap.index)
+    pgap = perf_from_signal(dgap, sgap, fee=0.0)
+    out["no_preexecution_overnight_credit"] = abs(pgap.ret) < 1e-12
 
     raw = synthetic_ohlcv(seed=1, n=800, regime="trend")
     market = synthetic_ohlcv(seed=2, n=800, regime="random")

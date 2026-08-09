@@ -48,7 +48,7 @@ jobs:
           path: reports/
           if-no-files-found: warn
           retention-days: 7
-      - name: Persist paper state on newest main
+      - name: Persist latest known-good paper state
         if: success()
         run: |
           mkdir -p /tmp/apex-paper
@@ -80,5 +80,51 @@ jobs:
             git commit -m "chore: refresh raw-execution shadow paper cycle [skip ci]"
             git push origin HEAD:main
           fi
+      - name: Persist paper-cycle heartbeat and fail-closed diagnostics
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          RUN_ID: ${{ github.run_id }}
+          TRIGGER_SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          mkdir -p /tmp/apex-paper-status
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          status = {
+              "pipeline": "PAPER_CYCLE",
+              "status": os.environ.get("JOB_STATUS", "unknown"),
+              "at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+              "run_id": os.environ.get("RUN_ID"),
+              "trigger_sha": os.environ.get("TRIGGER_SHA"),
+              "event": os.environ.get("EVENT_NAME"),
+          }
+          Path("/tmp/apex-paper-status/paper_pipeline_status.json").write_text(
+              json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8"
+          )
+          PY
+          if [ -f reports/failed_paper_broker.json ]; then cp -f reports/failed_paper_broker.json /tmp/apex-paper-status/; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+          mkdir -p reports
+          cp -f /tmp/apex-paper-status/paper_pipeline_status.json reports/
+          if [ "$JOB_STATUS" = "success" ]; then
+            git rm -f --ignore-unmatch reports/failed_paper_broker.json || true
+          elif [ -f /tmp/apex-paper-status/failed_paper_broker.json ]; then
+            cp -f /tmp/apex-paper-status/failed_paper_broker.json reports/
+          fi
+          git add reports/paper_pipeline_status.json
+          if [ -f reports/failed_paper_broker.json ]; then git add reports/failed_paper_broker.json; fi
+          if git diff --cached --quiet; then
+            echo "No paper-pipeline-status changes"
+          else
+            git commit -m "chore: persist paper pipeline status [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
 
-# v1.4.6: 46-test post-order-dividend verification trigger
+# v1.4.7: known-good paper state + always-persisted heartbeat/fail-closed diagnostics

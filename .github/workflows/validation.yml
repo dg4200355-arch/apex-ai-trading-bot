@@ -24,7 +24,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Compile Python entrypoints
-        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py tools/portfolio_gate.py tools/paper_broker.py tools/broker_health.py
+        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py tools/portfolio_gate.py tools/paper_broker.py tools/paper_broker_raw.py tools/broker_health.py
       - run: PYTHONPATH=. pytest -q
 
   market-smoke:
@@ -64,9 +64,9 @@ jobs:
         run: PYTHONPATH=. python tools/promotion_gate.py
       - name: Apply portfolio concentration gate
         run: PYTHONPATH=. python tools/portfolio_gate.py
-      - name: Update timing-safe shadow paper broker
-        run: PYTHONPATH=. python tools/paper_broker.py
-      - name: Validate shadow broker accounting and risk invariants
+      - name: Update raw-execution shadow paper broker
+        run: PYTHONPATH=. python tools/paper_broker_raw.py
+      - name: Validate raw broker accounting and risk invariants
         run: PYTHONPATH=. python tools/broker_health.py
       - name: Upload validation report
         if: always()
@@ -110,8 +110,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No report changes"
           else
-            git commit -m "chore: refresh v9.0 timing-safe validation and paper reports [skip ci]"
+            git commit -m "chore: refresh v9.1 raw-execution validation and paper reports [skip ci]"
             git push origin HEAD:main
           fi
 
-# v9.0.3: unit-gated FULL80 + purged freeze/confirmation + fail-closed data safety + timing-safe paper broker
+# v9.1: purged/fail-closed FULL80 + raw execution shadow broker + corporate-action accounting

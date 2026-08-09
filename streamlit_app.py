@@ -9,7 +9,9 @@ import yfinance as yf
 
 from engine import analyze_frame, make_features, run_self_tests
 
-st.set_page_config(page_title="APEX Autonomous Validation v8.1", page_icon="🧠", layout="wide")
+EXPECTED_ENGINE_VERSION = "8.2-next-open"
+
+st.set_page_config(page_title="APEX Autonomous Validation v8.2", page_icon="🧠", layout="wide")
 st.markdown(
     """
     <meta name="google" content="notranslate">
@@ -119,11 +121,15 @@ def show_saved_report():
         auto = pd.read_csv(path)
         if auto.empty:
             return
+        report_version = str(auto["엔진버전"].iloc[0]) if "엔진버전" in auto.columns else "legacy"
+        if report_version != EXPECTED_ENGINE_VERSION:
+            st.warning(f"저장된 자동 리포트는 이전 엔진({report_version}) 결과라 숨겼습니다. 새 {EXPECTED_ENGINE_VERSION} 스캔 결과를 기다리는 중입니다.")
+            return
         run_at = str(auto["실행시각UTC"].iloc[0]) if "실행시각UTC" in auto.columns else "기록 없음"
         strict = auto[auto["최종통과"] == "✅"] if "최종통과" in auto.columns else auto.iloc[0:0]
         watch = auto[auto["최종등급"].isin(["A", "B", "관찰"])] if "최종등급" in auto.columns else auto.iloc[0:0]
         with st.expander("📡 최신 자동 시장 스캔", expanded=True):
-            st.caption(f"마지막 자동 실행(UTC): {run_at}")
+            st.caption(f"엔진 {report_version} · 마지막 자동 실행(UTC): {run_at}")
             a1,a2,a3,a4 = st.columns(4)
             a1.metric("자동 검사", f"{len(auto)}개")
             a2.metric("A 통과", f"{len(strict)}개")
@@ -148,8 +154,8 @@ def show_saved_report():
         st.warning(f"저장된 자동 리포트를 읽지 못했습니다: {e}")
 
 
-st.title("🧠 APEX Autonomous Validation v8.1")
-st.caption("자가 테스트 → 다중전략 경쟁 → purged OOF AI 검증 → 완전 분리 TEST → 타이밍 순열검정 → 종목군 다중검정 보정")
+st.title("🧠 APEX Autonomous Validation v8.2")
+st.caption("다음날 시가 체결 · 자가 테스트 · 다중전략 경쟁 · purged OOF AI · 완전 분리 TEST · 순환 타이밍 검정 · 다중검정 보정")
 st.warning("연구·모의투자용입니다. A등급도 미래 수익을 보장하지 않으며 실계좌 주문 기능은 없습니다.")
 
 checks = run_self_tests()

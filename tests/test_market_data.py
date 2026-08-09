@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 
+import market_data as md
 from market_data import MAX_SINGLE_REPAIR_EXCESS, apply_adj_close_factor, normalize_ohlcv
 
 
@@ -77,3 +78,30 @@ def test_non_positive_price_is_rejected():
     d.loc[d.index[0], "Close"] = 0
     with pytest.raises(ValueError, match="non-positive price"):
         normalize_ohlcv(d, "TEST")
+
+
+def _raw_with_adjustment():
+    d = good_frame(3)
+    d["Adj Close"] = d["Close"] * 0.5
+    d["Dividends"] = [0.0, 1.25, 0.0]
+    d["Stock Splits"] = [0.0, 0.0, 2.0]
+    return d
+
+
+def test_research_and_execution_price_bases_never_mix(monkeypatch):
+    source = _raw_with_adjustment()
+    monkeypatch.setattr(md, "_download_yahoo", lambda *args, **kwargs: source.copy())
+    research = md.download_ohlcv("TEST", period="1y")
+    execution = md.download_trade_ohlcv("TEST", period="1y")
+    assert research.attrs["price_basis"] == "ADJUSTED_RESEARCH"
+    assert execution.attrs["price_basis"] == "RAW_EXECUTION"
+    assert research.iloc[0]["Close"] == pytest.approx(source.iloc[0]["Close"] * 0.5)
+    assert execution.iloc[0]["Close"] == pytest.approx(source.iloc[0]["Close"])
+
+
+def test_trade_actions_are_exposed_separately(monkeypatch):
+    source = _raw_with_adjustment()
+    monkeypatch.setattr(md, "_download_yahoo", lambda *args, **kwargs: source.copy())
+    actions = md.download_trade_actions("TEST", period="1y")
+    assert actions.iloc[1]["Dividends"] == pytest.approx(1.25)
+    assert actions.iloc[2]["Stock Splits"] == pytest.approx(2.0)

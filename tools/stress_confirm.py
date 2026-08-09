@@ -1,33 +1,24 @@
-"""Second-stage robustness confirmation for APEX v8.x candidates.
+"""Second-stage robustness confirmation with immutable stage-1 choices.
 
-This script does NOT search for a better strategy on the hidden TEST period.
-It reconstructs the strategy chosen by the primary scan, freezes that choice,
-and then tries to break it with:
-  1) higher transaction costs,
-  2) nearby parameter perturbations,
-  3) a longer 10-year regime-history stress test.
+Stage 2 is rejection-only. It NEVER re-selects a strategy or parameter. It reads
+stage 1's exact strategy family, exact JSON parameters, and exact market-data
+cutoff, reconstructs the same test, checks reproducibility, and only then tries to
+break the frozen strategy with higher costs, nearby parameter perturbations, and a
+10-year historical regime stress ending at the same cutoff.
 
-The purpose is rejection, not optimization. No live orders are placed.
+No live orders are placed.
 """
 from __future__ import annotations
 
 from pathlib import Path
 import json
-import math
 from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
 
-from engine import (
-    build_rule_signal,
-    fit_ai_predict,
-    make_features,
-    perf_from_signal,
-    select_ai,
-    select_rule,
-)
+from engine import build_rule_signal, fit_ai_predict, make_features, perf_from_signal
 
 REPORT = Path("reports/latest_validation.csv")
 OUT = Path("reports/latest_confirmation.csv")
@@ -35,11 +26,23 @@ SUMMARY = Path("reports/latest_confirmation.md")
 BASE_FEE = 0.0015
 STRESS_FEE = 0.0025
 FEES = [0.0015, 0.0025, 0.0035]
-ENGINE_VERSION = "8.3-stress-confirm"
+FUTURE = 5
+TARGET_PCT = 0.01
+REPRO_TOL = 0.01
+ENGINE_VERSION = "8.5-frozen-confirm"
 
 
-def dl(ticker: str, period: str) -> pd.DataFrame:
-    d = yf.download(ticker, period=period, interval="1d", auto_adjust=True, progress=False, threads=False)
+def dl_dates(ticker: str, start: pd.Timestamp, cutoff: pd.Timestamp) -> pd.DataFrame:
+    end = cutoff + pd.Timedelta(days=1)
+    d = yf.download(
+        ticker,
+        start=start.date().isoformat(),
+        end=end.date().isoformat(),
+        interval="1d",
+        auto_adjust=True,
+        progress=False,
+        threads=False,
+    )
     if d is None or d.empty:
         raise RuntimeError(f"no data: {ticker}")
     if isinstance(d.columns, pd.MultiIndex):
@@ -48,30 +51,24 @@ def dl(ticker: str, period: str) -> pd.DataFrame:
     need = ["Open", "High", "Low", "Close", "Volume"]
     if any(c not in d.columns for c in need):
         raise RuntimeError(f"bad OHLCV: {ticker}")
-    return d[need].dropna()
+    d = d[need].dropna().sort_index()
+    return d.loc[d.index <= cutoff]
 
 
-def reconstruct_choice(data: pd.DataFrame, future: int = 5):
-    split = int(len(data) * 0.75)
-    pretest = data.iloc[:split].copy()
-    rule = select_rule(pretest, data, BASE_FEE)
-    ai = select_ai(pretest, future, BASE_FEE, True) if pretest["target"].nunique() > 1 else None
-    choices = [c for c in [rule, ai] if c is not None]
-    if not choices:
-        raise ValueError("no reconstructable strategy")
-    return max(choices, key=lambda c: c.validation_score), pretest, data.iloc[split:].copy()
-
-
-def signal_for_choice(data: pd.DataFrame, pretest: pd.DataFrame, target: pd.DataFrame, choice, future: int = 5) -> pd.Series:
-    if choice.kind == "AI":
-        p = fit_ai_predict(pretest, target, True)
-        return (
-            (pd.Series(p, index=target.index) >= float(choice.params["threshold"]))
-            & (target["Close"] > target["ema55"])
-            & target["rsi"].between(45, 78)
-        )
-    full = build_rule_signal(data, choice.kind, choice.params)
-    return full.reindex(target.index).fillna(False)
+def parse_frozen_choice(row: pd.Series) -> Tuple[str, Dict[str, float], pd.Timestamp, pd.Timestamp]:
+    required = ["선택전략", "전략파라미터", "데이터시작일", "데이터기준일"]
+    missing = [c for c in required if c not in row.index or pd.isna(row[c])]
+    if missing:
+        raise ValueError(f"primary freeze metadata missing: {missing}")
+    kind = str(row["선택전략"])
+    params = json.loads(str(row["전략파라미터"]))
+    if not isinstance(params, dict) or not params:
+        raise ValueError("invalid frozen strategy parameters")
+    start = pd.Timestamp(str(row["데이터시작일"]))
+    cutoff = pd.Timestamp(str(row["데이터기준일"]))
+    if start >= cutoff:
+        raise ValueError("invalid primary data window")
+    return kind, params, start, cutoff
 
 
 def nearby_params(kind: str, params: Dict[str, float]) -> List[Dict[str, float]]:
@@ -94,9 +91,9 @@ def nearby_params(kind: str, params: Dict[str, float]) -> List[Dict[str, float]]
     elif kind == "AI":
         for delta in (-0.04, 0.04):
             p = dict(base); p["threshold"] = float(np.clip(base["threshold"] + delta, 0.48, 0.75)); out.append(p)
-    # de-duplicate while preserving order
-    unique = []
-    seen = set()
+    else:
+        raise ValueError(f"unknown frozen strategy: {kind}")
+    unique, seen = [], set()
     for p in out:
         key = json.dumps(p, sort_keys=True)
         if key not in seen:
@@ -106,6 +103,8 @@ def nearby_params(kind: str, params: Dict[str, float]) -> List[Dict[str, float]]
 
 def fixed_signal(data: pd.DataFrame, pretest: pd.DataFrame, target: pd.DataFrame, kind: str, params: Dict[str, float]) -> pd.Series:
     if kind == "AI":
+        if len(pretest) < 450 or pretest["target"].nunique() < 2:
+            raise ValueError("frozen AI training window unavailable")
         p = fit_ai_predict(pretest, target, True)
         return (
             (pd.Series(p, index=target.index) >= float(params["threshold"]))
@@ -115,13 +114,7 @@ def fixed_signal(data: pd.DataFrame, pretest: pd.DataFrame, target: pd.DataFrame
     return build_rule_signal(data, kind, params).reindex(target.index).fillna(False)
 
 
-def history_stress(data10: pd.DataFrame, kind: str, params: Dict[str, float], future: int = 5) -> Tuple[float, float, float, int]:
-    """Walk through four later-history windows with the strategy parameters frozen.
-
-    Rule strategies use exactly the same fixed parameters. AI uses expanding-window
-    refits but keeps the threshold and filters fixed; the model is never fit on the
-    window it is evaluated on.
-    """
+def history_stress(data10: pd.DataFrame, kind: str, params: Dict[str, float]) -> Tuple[float, float, float, int]:
     n = len(data10)
     start = max(500, int(n * 0.35))
     edges = np.linspace(start, n, 5, dtype=int)
@@ -134,15 +127,17 @@ def history_stress(data10: pd.DataFrame, kind: str, params: Dict[str, float], fu
         if len(target) < 100:
             continue
         if kind == "AI":
-            train_end = max(0, a - future)
+            train_end = max(0, a - FUTURE)
             train = data10.iloc[:train_end].copy()
             if len(train) < 450 or train["target"].nunique() < 2:
                 continue
-            sig = fixed_signal(data10, train, target, kind, params)
         else:
-            sig = fixed_signal(data10, data10.iloc[:a], target, kind, params)
+            train = data10.iloc[:a].copy()
+        sig = fixed_signal(data10, train, target, kind, params)
         perf = perf_from_signal(target, sig, STRESS_FEE)
-        rets.append(perf.ret); mdds.append(perf.mdd); trades += perf.trades
+        rets.append(perf.ret)
+        mdds.append(perf.mdd)
+        trades += perf.trades
     if not rets:
         return 0.0, -1.0, -1.0, 0
     return float(np.mean(np.array(rets) > 0)), float(np.median(rets)), float(np.min(mdds)), int(trades)
@@ -156,17 +151,20 @@ def confirm_one(row: pd.Series) -> Dict[str, object]:
     ticker = str(row["코드"])
     market = str(row["시장"])
     benchmark = "^KS11" if market == "KR" else "SPY"
+    kind, params, start5, cutoff = parse_frozen_choice(row)
 
-    raw5, bench5 = dl(ticker, "5y"), dl(benchmark, "5y")
-    data5 = make_features(raw5, bench5, future=5, target_pct=.01)
-    choice, pretest5, test5 = reconstruct_choice(data5, future=5)
-
-    # Verify we are confirming the same strategy family emitted by the scan.
-    scan_kind = str(row["선택전략"])
-    if choice.kind != scan_kind:
-        raise ValueError(f"strategy drift: scan={scan_kind}, reconstructed={choice.kind}")
-
-    base_sig = signal_for_choice(data5, pretest5, test5, choice, future=5)
+    raw5 = dl_dates(ticker, start5, cutoff)
+    bench5 = dl_dates(benchmark, start5, cutoff)
+    data5 = make_features(raw5, bench5, future=FUTURE, target_pct=TARGET_PCT)
+    if len(data5) < 850:
+        raise ValueError("frozen 5y data insufficient")
+    split = int(len(data5) * 0.75)
+    pretest5 = data5.iloc[:split].copy()
+    test5 = data5.iloc[split:].copy()
+    base_sig = fixed_signal(data5, pretest5, test5, kind, params)
+    base_perf = perf_from_signal(test5, base_sig, BASE_FEE)
+    primary_ret = float(row["TEST수익"])
+    repro_error = abs(float(base_perf.ret) - primary_ret)
 
     fee_perfs = [perf_from_signal(test5, base_sig, fee) for fee in FEES]
     fee_positive = float(np.mean([p.ret > 0 for p in fee_perfs]))
@@ -176,18 +174,21 @@ def confirm_one(row: pd.Series) -> Dict[str, object]:
     fee_min_trades = int(np.min([p.trades for p in fee_perfs]))
 
     neighbor_perfs = []
-    for params in nearby_params(choice.kind, choice.params):
-        sig = fixed_signal(data5, pretest5, test5, choice.kind, params)
+    for pset in nearby_params(kind, params):
+        sig = fixed_signal(data5, pretest5, test5, kind, pset)
         neighbor_perfs.append(perf_from_signal(test5, sig, STRESS_FEE))
     neighbor_positive = float(np.mean([p.ret > 0 for p in neighbor_perfs]))
     neighbor_median_ret = float(np.median([p.ret for p in neighbor_perfs]))
     neighbor_worst_mdd = float(np.min([p.mdd for p in neighbor_perfs]))
 
-    raw10, bench10 = dl(ticker, "10y"), dl(benchmark, "10y")
-    data10 = make_features(raw10, bench10, future=5, target_pct=.01)
-    hist_positive, hist_median_ret, hist_worst_mdd, hist_trades = history_stress(data10, choice.kind, choice.params, future=5)
+    start10 = cutoff - pd.DateOffset(years=10)
+    raw10 = dl_dates(ticker, start10, cutoff)
+    bench10 = dl_dates(benchmark, start10, cutoff)
+    data10 = make_features(raw10, bench10, future=FUTURE, target_pct=TARGET_PCT)
+    hist_positive, hist_median_ret, hist_worst_mdd, hist_trades = history_stress(data10, kind, params)
 
     reasons = []
+    if repro_error > REPRO_TOL: reasons.append("1차재현오차")
     if fee_positive < 1.0: reasons.append("비용스트레스")
     if fee_median_ret <= 0: reasons.append("비용수익")
     if fee_worst_mdd < -0.25: reasons.append("비용MDD")
@@ -208,10 +209,13 @@ def confirm_one(row: pd.Series) -> Dict[str, object]:
         "종목": row["종목"],
         "코드": ticker,
         "시장": market,
-        "전략": choice.kind,
-        "전략파라미터": json.dumps(choice.params, ensure_ascii=False, sort_keys=True),
+        "전략": kind,
+        "전략파라미터": json.dumps(params, ensure_ascii=False, sort_keys=True),
+        "1차데이터기준일": cutoff.date().isoformat(),
         "1차등급": row["최종등급"],
-        "1차TEST수익": float(row["TEST수익"]),
+        "1차TEST수익": primary_ret,
+        "재현TEST수익": float(base_perf.ret),
+        "재현오차": repro_error,
         "1차q": float(row["다중검정q"]) if np.isfinite(row["다중검정q"]) else np.nan,
         "비용양수비율": fee_positive,
         "비용중앙수익": fee_median_ret,
@@ -234,17 +238,20 @@ def main():
     Path("reports").mkdir(exist_ok=True)
     if not REPORT.exists():
         pd.DataFrame().to_csv(OUT, index=False)
-        SUMMARY.write_text("# APEX stress confirmation\n\n- primary report missing\n", encoding="utf-8")
+        SUMMARY.write_text("# APEX frozen stress confirmation\n\n- primary report missing\n", encoding="utf-8")
         return
 
     primary = pd.read_csv(REPORT)
     if primary.empty:
         pd.DataFrame().to_csv(OUT, index=False)
-        SUMMARY.write_text("# APEX stress confirmation\n\n- no primary rows\n", encoding="utf-8")
+        SUMMARY.write_text("# APEX frozen stress confirmation\n\n- no primary rows\n", encoding="utf-8")
         return
 
-    mask = primary["최종등급"].isin(["A", "B", "관찰"])
-    candidates = primary.loc[mask].copy()
+    freeze_cols = {"전략파라미터", "데이터시작일", "데이터기준일"}
+    if not freeze_cols.issubset(primary.columns):
+        raise SystemExit(f"primary report predates frozen schema: {sorted(freeze_cols - set(primary.columns))}")
+
+    candidates = primary.loc[primary["최종등급"].isin(["A", "B", "관찰"])].copy()
     rows, errors = [], []
     for _, row in candidates.iterrows():
         try:
@@ -259,21 +266,19 @@ def main():
 
     confirmed = result[result["2차통과"] == "✅"] if not result.empty else result
     lines = [
-        "# APEX stress confirmation",
-        "",
+        "# APEX frozen stress confirmation", "",
         f"- engine: {ENGINE_VERSION}",
         f"- candidates from primary scan: {len(candidates)}",
         f"- confirmed: {len(confirmed)}",
-        f"- errors: {len(errors)}",
-        "",
+        f"- errors: {len(errors)}", "",
     ]
     if not result.empty:
         lines += ["## Results", ""]
         for _, r in result.iterrows():
             lines.append(
-                f"- {r['2차등급']} {r['종목']} ({r['코드']}): {r['전략']}, "
-                f"cost_med={r['비용중앙수익']:.2%}, neighbor_pos={r['파라미터양수비율']:.0%}, "
-                f"10y_pos={r['10년양수비율']:.0%}, reason={r['보류사유']}"
+                f"- {r['2차등급']} {r['종목']} ({r['코드']}): {r['전략']} {r['전략파라미터']}, "
+                f"repro_error={r['재현오차']:.4f}, cost_med={r['비용중앙수익']:.2%}, "
+                f"neighbor_pos={r['파라미터양수비율']:.0%}, 10y_pos={r['10년양수비율']:.0%}, reason={r['보류사유']}"
             )
     if errors:
         lines += ["", "## Errors", "", "```json", json.dumps(errors, ensure_ascii=False, indent=2), "```"]

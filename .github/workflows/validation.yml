@@ -53,13 +53,13 @@ jobs:
           python-version: '3.11'
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Run full Korea + US 80-stock validation
+      - name: Run full Korea + US 80-stock frozen validation
         run: PYTHONPATH=. python tools/autonomous_scan.py
-      - name: Run second-stage robustness confirmation
+      - name: Run immutable second-stage confirmation
         run: PYTHONPATH=. python tools/stress_confirm.py
-      - name: Update forward-only paper tracker
+      - name: Update frozen-admission forward paper tracker
         run: PYTHONPATH=. python tools/paper_forward.py
-      - name: Apply final promotion gate
+      - name: Apply frozen-admission promotion gate
         run: PYTHONPATH=. python tools/promotion_gate.py
       - name: Upload validation report
         if: always()
@@ -93,8 +93,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No report changes"
           else
-            git commit -m "chore: refresh v8.4 validation pipeline reports [skip ci]"
+            git commit -m "chore: refresh v8.5 frozen validation reports [skip ci]"
             git push origin HEAD:main
           fi
 
-# v8.4.1: full 80-stock correction + stress confirmation + replay-safe paper tracker + forward-family BH promotion gate
+# v8.5: full80 + exact parameter/data-window freeze + immutable stress confirmation + frozen-admission paper gate

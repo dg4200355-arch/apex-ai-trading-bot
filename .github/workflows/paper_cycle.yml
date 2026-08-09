@@ -127,4 +127,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v1.4.7: known-good paper state + always-persisted heartbeat/fail-closed diagnostics
+# v1.4.8: heartbeat persistence verification trigger

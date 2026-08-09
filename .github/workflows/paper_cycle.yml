@@ -79,4 +79,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v1.1: health-gated shadow paper cycle with shared concurrency lock
+# v1.2: health-gated cycle with verification-revocation exits and shared concurrency lock

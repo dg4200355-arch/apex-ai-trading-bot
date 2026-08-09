@@ -2,8 +2,8 @@
 
 Every scheduled run scans 40 Korea + 40 US stocks. Global BH correction uses all
 80 hypotheses. Stable-strategy absence is a normal rejection, while true data or
-engine faults remain separate errors. Data repair diagnostics are recorded per row.
-No live orders are placed.
+engine faults fail the run closed so stale known-good reports remain authoritative.
+Data repair diagnostics are recorded per row. No live orders are placed.
 """
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +20,7 @@ FAMILY_SIZE = 80
 BASE_FEE = 0.0015
 FUTURE = 5
 TARGET_PCT = 0.01
+FAILURE_REPORT = Path("reports/failed_scan_errors.json")
 
 KOREA = {
     "삼성전자":"005930.KS","SK하이닉스":"000660.KS","현대차":"005380.KS","기아":"000270.KS",
@@ -127,6 +128,20 @@ def normal_rejection_row(name: str, ticker: str, reason: str) -> dict:
     }
 
 
+def fail_closed(errors: list, run_at: str):
+    """Transient/engine faults must not become evidence that removes candidates."""
+    if not errors:
+        if FAILURE_REPORT.exists():
+            FAILURE_REPORT.unlink()
+        return
+    FAILURE_REPORT.parent.mkdir(exist_ok=True)
+    FAILURE_REPORT.write_text(
+        json.dumps({"run_at_utc": run_at, "engine": ENGINE_VERSION, "errors": errors}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    raise SystemExit(f"FULL80 failed closed: {len(errors)} true data/engine errors; prior good report preserved")
+
+
 def main():
     checks = run_self_tests()
     if not checks or not all(checks.values()):
@@ -176,6 +191,7 @@ def main():
             })
             print(ticker, "ERROR", repr(e))
 
+    fail_closed(errors, run_at)
     if not rows:
         raise SystemExit("no analyzable market rows")
 
@@ -185,7 +201,7 @@ def main():
     out_dir = Path("reports")
     out_dir.mkdir(exist_ok=True)
     result.to_csv(out_dir / "latest_validation.csv", index=False, encoding="utf-8-sig")
-    (out_dir / "latest_errors.json").write_text(json.dumps(errors, ensure_ascii=False, indent=2), encoding="utf-8")
+    (out_dir / "latest_errors.json").write_text("[]", encoding="utf-8")
 
     strict = result[result["최종통과"] == "✅"]
     watch = result[result["최종등급"].isin(["A", "B", "관찰"])]
@@ -196,7 +212,7 @@ def main():
         "# APEX autonomous validation summary", "",
         f"- engine_version: {ENGINE_VERSION}", "- scan_mode: FULL80", f"- run_at_utc: {run_at}",
         f"- universe: {FAMILY_SIZE}", f"- result_rows: {len(result)}",
-        f"- valid-data normal rejections: {normal_rejects}", f"- true data/engine errors: {len(errors)}",
+        f"- valid-data normal rejections: {normal_rejects}", "- true data/engine errors: 0",
         f"- tickers with isolated OHLC repairs: {repaired_rows}", f"- total repaired OHLC bars: {total_repairs}",
         f"- selection split: 75% boundary with {FUTURE}-bar purge/embargo",
         f"- A-grade passed after global correction: {len(strict)}", f"- watch-or-better: {len(watch)}", "",

@@ -78,3 +78,5 @@ jobs:
             git commit -m "chore: refresh post-close shadow paper cycle [skip ci]"
             git push origin HEAD:main
           fi
+
+# v1.1: health-gated shadow paper cycle with shared concurrency lock

@@ -113,4 +113,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v8.8: tolerant adjusted-OHLC integrity + frozen validation + risk-stopped shadow paper broker + health gate
+# v8.8.1: precise adjusted-OHLC diagnostics + frozen validation + health-gated shadow broker

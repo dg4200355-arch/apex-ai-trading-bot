@@ -8,9 +8,16 @@ import pandas as pd
 import yfinance as yf
 
 REQUIRED = ["Open", "High", "Low", "Close", "Volume"]
-# yfinance auto-adjusted OHLC can contain small Open/Close-vs-range mismatches
-# from vendor adjustment/rounding, especially on some Korean listings.
-RANGE_REL_TOL = 0.005
+# After one-factor manual adjustment, only tiny floating/rounding drift is allowed.
+RANGE_REL_TOL = 0.0005
+
+
+def _flatten_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    d = frame.copy()
+    if isinstance(d.columns, pd.MultiIndex):
+        d.columns = d.columns.get_level_values(0)
+    d.columns = [str(c).title() for c in d.columns]
+    return d
 
 
 def _worst_positive(series: pd.Series):
@@ -21,13 +28,43 @@ def _worst_positive(series: pd.Series):
     return idx, float(clean.loc[idx])
 
 
+def apply_adj_close_factor(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
+    """Adjust O/H/L/C with one common Adj Close / raw Close factor.
+
+    yfinance auto_adjust=True can occasionally expose historical Korean OHLC bars
+    whose Open/High/Low/Close no longer share exactly the same adjustment basis.
+    Pulling raw OHLC plus Adj Close and applying one factor ourselves preserves the
+    candle geometry while still accounting for splits/dividends.
+    """
+    d = _flatten_columns(frame)
+    missing = [c for c in REQUIRED if c not in d.columns]
+    if missing:
+        raise ValueError(f"missing OHLCV columns {missing}: {ticker}")
+
+    for col in REQUIRED + (["Adj Close"] if "Adj Close" in d.columns else []):
+        d[col] = pd.to_numeric(d[col], errors="coerce")
+
+    if "Adj Close" not in d.columns:
+        return d[REQUIRED].copy()
+
+    raw_close = d["Close"].replace(0, np.nan)
+    factor = d["Adj Close"] / raw_close
+    bad_factor = (~np.isfinite(factor)) | (factor <= 0)
+    if bad_factor.any():
+        d = d.loc[~bad_factor].copy()
+        factor = factor.loc[~bad_factor]
+    if d.empty:
+        raise ValueError(f"no valid adjustment factors: {ticker}")
+
+    for col in ["Open", "High", "Low", "Close"]:
+        d[col] = d[col] * factor
+    return d[REQUIRED].copy()
+
+
 def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
     if frame is None or frame.empty:
         raise ValueError(f"empty OHLCV: {ticker}")
-    d = frame.copy()
-    if isinstance(d.columns, pd.MultiIndex):
-        d.columns = d.columns.get_level_values(0)
-    d.columns = [str(c).title() for c in d.columns]
+    d = _flatten_columns(frame)
     missing = [c for c in REQUIRED if c not in d.columns]
     if missing:
         raise ValueError(f"missing OHLCV columns {missing}: {ticker}")
@@ -50,14 +87,11 @@ def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
     if (d["Volume"] < 0).any():
         raise ValueError(f"negative volume: {ticker}")
 
-    # High/Low come from the same adjusted bar and must never cross.
     crossed = d["High"] < d["Low"]
     if crossed.any():
         date = pd.Timestamp(crossed[crossed].index[0]).date().isoformat()
         raise ValueError(f"high-low invariant failed: {ticker} date={date}")
 
-    # Open/Close may sit very slightly outside adjusted High/Low due to vendor
-    # rounding. Measure and reject only a material relative excess.
     oc_high = d[["Open", "Close"]].max(axis=1)
     high_excess = (oc_high - d["High"]) / d["High"]
     high_date, high_worst = _worst_positive(high_excess)
@@ -91,7 +125,8 @@ def download_ohlcv(
     kwargs = {
         "tickers": ticker,
         "interval": "1d",
-        "auto_adjust": True,
+        "auto_adjust": False,
+        "actions": False,
         "progress": False,
         "threads": False,
     }
@@ -102,4 +137,5 @@ def download_ohlcv(
     if end is not None:
         kwargs["end"] = end
     raw = yf.download(**kwargs)
-    return normalize_ohlcv(raw, ticker)
+    adjusted = apply_adj_close_factor(raw, ticker)
+    return normalize_ohlcv(adjusted, ticker)

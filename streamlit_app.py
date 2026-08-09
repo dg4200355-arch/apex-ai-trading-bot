@@ -14,8 +14,9 @@ CONFIRM_VERSION = "8.5-frozen-confirm"
 TRACKER_VERSION = "paper-forward-1.2-frozen-admission"
 GATE_VERSION = "promotion-gate-1.3-frozen-admission"
 PORTFOLIO_VERSION = "portfolio-gate-1.1-cluster-leader"
+BROKER_VERSION = "paper-broker-1.0-shadow"
 
-st.set_page_config(page_title="APEX Autonomous Validation v8.6", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="APEX Autonomous Validation v8.7", page_icon="🧠", layout="wide")
 st.markdown(
     """
     <meta name="google" content="notranslate">
@@ -63,6 +64,15 @@ def pct(x):
 def num(x, digits=3):
     try:
         return "-" if not np.isfinite(float(x)) else f"{float(x):.{digits}f}"
+    except Exception:
+        return "-"
+
+
+def money(x, currency):
+    try:
+        v = float(x)
+        if not np.isfinite(v): return "-"
+        return f"₩{v:,.0f}" if str(currency) == "KRW" else f"${v:,.2f}"
     except Exception:
         return "-"
 
@@ -196,13 +206,59 @@ def render_portfolio():
         st.dataframe(show[cols],use_container_width=True,hide_index=True)
 
 
-st.title("🧠 APEX Autonomous Validation v8.6")
-st.caption("80종목 전체검정 → 파라미터 동결 2차 → 전진모의 → 최종 통계 → 상관군집 대표선택")
+def render_broker():
+    accounts = safe_csv("reports/paper_account.csv")
+    positions = safe_csv("reports/paper_positions.csv")
+    orders = safe_csv("reports/paper_orders.csv")
+    with st.expander("⑥ 🤖 모의자동매매 가상계좌", expanded=True):
+        if accounts.empty:
+            st.info("모의자동매매 계좌 초기화를 기다리는 중입니다.")
+            return
+        if "시각UTC" in accounts: accounts = accounts.sort_values("시각UTC")
+        latest = accounts.drop_duplicates("시장", keep="last")
+        kr = latest[latest["시장"].astype(str)=="KR"]
+        us = latest[latest["시장"].astype(str)=="US"]
+        c1,c2,c3,c4 = st.columns(4)
+        if not kr.empty:
+            r=kr.iloc[-1]; c1.metric("KR 가상자산",money(r.get("총자산"),r.get("통화")),pct(r.get("누적수익률")))
+        else: c1.metric("KR 가상자산","-")
+        if not us.empty:
+            r=us.iloc[-1]; c2.metric("US 가상자산",money(r.get("총자산"),r.get("통화")),pct(r.get("누적수익률")))
+        else: c2.metric("US 가상자산","-")
+        c3.metric("현재 보유",f"{len(positions)}종목")
+        filled = orders[orders["상태"].astype(str)=="FILLED"] if not orders.empty and "상태" in orders else pd.DataFrame()
+        c4.metric("누적 체결",f"{len(filled)}건")
+        version = str(latest.get("브로커",pd.Series([BROKER_VERSION])).iloc[-1])
+        st.caption(f"{version} · 실계좌 주문 없음 · 종목당 최대 25% · 현금 10% 유지 · 시장별 최대 3종목 · 동일 상관군집 1종목 · 비용 0.15% + 슬리피지 0.05%")
+        st.warning("⑥의 손익은 검증 승격에 사용하지 않습니다. 전진검증과 분리된 그림자(shadow) 모의계좌입니다.")
+
+        show_acc=latest.copy()
+        for c in ["누적수익률","최대낙폭"]:
+            if c in show_acc: show_acc[c]=pd.to_numeric(show_acc[c],errors="coerce").apply(pct)
+        st.dataframe(show_acc[[c for c in ["기준일","시장","통화","현금","보유평가","총자산","누적수익률","최대낙폭","보유종목수","완료거래","실현손익"] if c in show_acc]],use_container_width=True,hide_index=True)
+
+        st.markdown("**현재 모의 보유종목**")
+        if positions.empty:
+            st.info("현재 보유 없음 · CASH")
+        else:
+            show_pos=positions.copy()
+            st.dataframe(show_pos[[c for c in ["시장","통화","코드","상관군집","수량","진입일","평균진입가","최근가격","평가금액","미실현손익"] if c in show_pos]],use_container_width=True,hide_index=True)
+
+        st.markdown("**최근 모의 주문**")
+        if orders.empty:
+            st.info("아직 자동 체결 주문이 없습니다.")
+        else:
+            recent=orders.tail(20).copy()
+            st.dataframe(recent[[c for c in ["체결일","시장","코드","구분","상태","사유","상관군집","수량","체결가","수수료","실현손익"] if c in recent]],use_container_width=True,hide_index=True)
+
+
+st.title("🧠 APEX Autonomous Validation v8.7")
+st.caption("80종목 전체검정 → 파라미터 동결 2차 → 전진모의 → 최종 통계 → 상관군집 → 모의자동매매")
 st.warning("연구·모의투자용입니다. 미래 수익을 보장하지 않으며 실계좌 주문 기능은 없습니다.")
 checks = run_self_tests()
 if not checks or not all(checks.values()): st.error(f"엔진 자가검증 실패: {checks}"); st.stop()
 st.success(f"엔진 자가검증 통과 · {sum(checks.values())}/{len(checks)}")
-render_primary(); render_confirmation(); render_paper(); render_gate(); render_portfolio()
+render_primary(); render_confirmation(); render_paper(); render_gate(); render_portfolio(); render_broker()
 
 with st.sidebar:
     st.header("수동 검증")
@@ -217,7 +273,7 @@ with st.sidebar:
     run=st.button("🚀 수동 검증",type="primary")
 
 if not run:
-    st.info("자동 파이프라인은 평일마다 80종목 전체를 ①→⑤ 순서로 갱신합니다.")
+    st.info("자동 파이프라인은 평일마다 80종목 전체를 ①→⑥ 순서로 갱신합니다.")
     st.stop()
 
 if market_choice=="한국 40종목": universe=list(KOREA.items())[:max_count]; benchmark="^KS11"
@@ -257,6 +313,6 @@ for c in ["PF","샤프","타이밍p","다중검정q","점수"]:
     if c in show: show[c]=show[c].apply(num)
 cols=[c for c in ["최종통과","최종등급","종목","코드","선택전략","TEST수익","최근63일","MDD","TEST거래수","승률","PF","샤프","타이밍p","다중검정q","탈락사유","점수"] if c in show]
 st.dataframe(show[cols],use_container_width=True,hide_index=True)
-st.download_button("검증 결과 CSV",result.to_csv(index=False).encode("utf-8-sig"),"apex_v86_manual_validation.csv","text/csv")
+st.download_button("검증 결과 CSV",result.to_csv(index=False).encode("utf-8-sig"),"apex_v87_manual_validation.csv","text/csv")
 if errors:
     with st.expander(f"분석 제외 {len(errors)}개"): st.code("\n".join(errors))

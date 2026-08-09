@@ -1,10 +1,8 @@
 """Final forward-only paper evidence gate.
 
-This gate never places orders. It prevents a historically attractive strategy
-from being labelled forward-validated until it has accumulated enough genuinely
-new market observations and completed paper trades. Forward candidates are also
-multiple-testing adjusted against each other so a growing candidate registry does
-not make accidental promotion easier.
+This gate never places orders. A candidate must first be re-verified by the current
+immutable stage-2 confirmation engine with the exact same admitted strategy and
+parameters. Only then can forward evidence be considered for promotion.
 """
 from pathlib import Path
 import json
@@ -16,7 +14,7 @@ STATE = Path("reports/paper_state.json")
 LOG = Path("reports/paper_forward.csv")
 OUT = Path("reports/promotion_status.csv")
 SUMMARY = Path("reports/promotion_status.md")
-VERSION = "promotion-gate-1.2-forward-bh"
+VERSION = "promotion-gate-1.3-frozen-admission"
 
 MIN_OBSERVATIONS = 60
 MIN_TRADES = 5
@@ -67,7 +65,6 @@ def stress_compounded_return(returns):
 
 
 def sign_test_pvalue(returns):
-    """One-sided exact sign test: H0 P(positive trade)=0.5 vs greater."""
     x = np.asarray(returns, dtype=float)
     x = x[np.isfinite(x)]
     x = x[x != 0]
@@ -141,6 +138,7 @@ def main():
             "stress_ret": stress_compounded_return(trade_returns),
             "boot_prob": bootstrap_positive_probability(trade_returns),
             "sign_p": sign_test_pvalue(trade_returns),
+            "frozen_verified": bool(s.get("frozen_verified", False)),
         })
 
     sign_q = bh_qvalues([m["sign_p"] for m in metrics], family_size=max(1, len(metrics)))
@@ -150,9 +148,12 @@ def main():
         obs, trades, wr, pf = m["obs"], m["trades"], m["wr"], m["pf"]
         fwd, mdd = m["fwd"], m["mdd"]
         stress_ret, boot_prob, sign_p = m["stress_ret"], m["boot_prob"], m["sign_p"]
+        frozen_verified = m["frozen_verified"]
         fq = float(sign_q[i]) if np.isfinite(sign_q[i]) else np.nan
 
         reasons = []
+        if not frozen_verified:
+            reasons.append("동결재검증")
         if obs < MIN_OBSERVATIONS:
             reasons.append(f"관측<{MIN_OBSERVATIONS}")
         if trades < MIN_TRADES:
@@ -173,12 +174,13 @@ def main():
             reasons.append("전진다중검정")
 
         failed = obs >= FAIL_CHECK_OBSERVATIONS and (fwd <= FAIL_RETURN or mdd <= FAIL_MDD)
-        passed = (not failed) and len(reasons) == 0
+        passed = frozen_verified and (not failed) and len(reasons) == 0
         final_status = "전진실패" if failed else ("전진검증완료" if passed else "관찰중")
 
         rows.append({
             "승격가능": "✅" if passed else "❌",
             "최종상태": final_status,
+            "동결검증": "FROZEN_VERIFIED" if frozen_verified else "LEGACY_LOCKED",
             "종목": s.get("종목", ticker),
             "코드": ticker,
             "전략": s.get("전략", "?"),
@@ -201,15 +203,17 @@ def main():
     result.to_csv(OUT, index=False, encoding="utf-8-sig")
     passed = result[result["승격가능"] == "✅"] if not result.empty else result
     failed = result[result["최종상태"] == "전진실패"] if not result.empty else result
+    verified = result[result["동결검증"] == "FROZEN_VERIFIED"] if not result.empty else result
     lines = [
         "# APEX final promotion gate", "",
         f"- gate: {VERSION}",
         f"- tracked candidates: {len(result)}",
+        f"- frozen-confirm verified: {len(verified)}",
         f"- forward-validated: {len(passed)}",
         f"- forward-failed: {len(failed)}", "",
-        "Promotion requires 60 new market observations, 5 completed paper trades, positive forward return,",
-        "controlled drawdown, win/PF quality, doubled-cost stress resilience, bootstrap support,",
-        "and a forward trade-direction sign test adjusted across all tracked candidates.",
+        "Promotion first requires immutable stage-2 re-verification of the exact admitted strategy and parameters.",
+        "It then requires 60 new observations, 5 completed paper trades, positive return, controlled drawdown,",
+        "win/PF quality, doubled-cost stress resilience, bootstrap support, and a candidate-family adjusted sign test.",
         "No status places orders or guarantees future returns.", "",
     ]
     if not result.empty:
@@ -220,9 +224,9 @@ def main():
             fq = r["전진다중검정q"]
             fq_txt = "-" if not np.isfinite(fq) else f"{fq:.3f}"
             lines.append(
-                f"- {r['최종상태']} {r['종목']} ({r['코드']}): obs={r['관측거래일']}, "
-                f"trades={r['완료거래']}, forward={r['전진누적수익']:.2%}, "
-                f"bootstrap={bp_txt}, forward_q={fq_txt}, waiting={r['대기조건']}"
+                f"- {r['최종상태']} {r['종목']} ({r['코드']}): frozen={r['동결검증']}, obs={r['관측거래일']}, "
+                f"trades={r['완료거래']}, forward={r['전진누적수익']:.2%}, bootstrap={bp_txt}, "
+                f"forward_q={fq_txt}, waiting={r['대기조건']}"
             )
     SUMMARY.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))

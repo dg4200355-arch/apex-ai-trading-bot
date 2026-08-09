@@ -101,4 +101,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v8.6: v8.5 frozen validation + portfolio correlation/concentration gate
+# v8.6 final: full80 + frozen validation + forward evidence + portfolio concentration control

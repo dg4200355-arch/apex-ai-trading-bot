@@ -2,6 +2,6 @@
   "version": "broker-health-1.0",
   "ok": true,
   "errors": [],
-  "broker_version": "paper-broker-1.1-risk-stop",
+  "broker_version": "paper-broker-1.2-verification-exit",
   "accounts": 2
 }

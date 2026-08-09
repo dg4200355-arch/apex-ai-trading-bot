@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "paper-broker-1.1-risk-stop",
+  "version": "paper-broker-1.2-verification-exit",
   "initialized_at_utc": "2026-08-09T06:56:35+00:00",
   "accounts": {
     "KR": {

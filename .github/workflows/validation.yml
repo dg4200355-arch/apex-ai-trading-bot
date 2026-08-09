@@ -94,4 +94,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v8.4: full 80-stock global correction + stress confirmation + replay-safe paper tracker + bootstrap promotion gate
+# v8.4.1: full 80-stock correction + stress confirmation + replay-safe paper tracker + forward-family BH promotion gate

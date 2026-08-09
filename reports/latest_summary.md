@@ -1,24 +1,28 @@
 # APEX autonomous validation summary
 
-- engine_version: 8.2-next-open
-- cohort: B
-- run_at_utc: 2026-08-09T05:49:15+00:00
-- analyzed: 31
-- A-grade passed: 0
-- watch-or-better: 2
-- data/errors: 9
+- engine_version: 8.4-full80
+- scan_mode: FULL80
+- run_at_utc: 2026-08-09T06:07:13+00:00
+- universe: 80
+- analyzed: 68
+- rejected/errors before result row: 12
+- A-grade passed after global correction: 0
+- watch-or-better: 4
 
 ## Top candidates
 
-- 탈락 Micron (MU): strategy=추세, TEST=207.52%, PF=3.04, timing_p=0.383, q=0.742
-- 탈락 LG이노텍 (011070.KS): strategy=돌파, TEST=189.88%, PF=8.48, timing_p=0.247, q=0.734
-- 탈락 Caterpillar (CAT): strategy=돌파, TEST=68.67%, PF=5.62, timing_p=0.346, q=0.742
-- 탈락 삼성중공업 (010140.KS): strategy=추세, TEST=28.39%, PF=1.58, timing_p=0.272, q=0.734
-- 탈락 한화오션 (042660.KS): strategy=추세, TEST=22.29%, PF=1.47, timing_p=0.198, q=0.680
-- 탈락 ExxonMobil (XOM): strategy=반전, TEST=21.21%, PF=nan, timing_p=0.123, q=0.680
-- 탈락 Qualcomm (QCOM): strategy=추세, TEST=25.96%, PF=1.58, timing_p=0.136, q=0.680
-- B Chevron (CVX): strategy=반전, TEST=14.64%, PF=16.03, timing_p=0.123, q=0.680
-- 탈락 기업은행 (024110.KS): strategy=반전, TEST=8.75%, PF=30.07, timing_p=0.284, q=0.734
-- 탈락 HLB (028300.KQ): strategy=반전, TEST=11.35%, PF=nan, timing_p=0.173, q=0.680
-- 탈락 삼성전기 (009150.KS): strategy=AI, TEST=8.57%, PF=7.92, timing_p=0.370, q=0.742
-- B IBM (IBM): strategy=추세, TEST=11.32%, PF=1.34, timing_p=0.198, q=0.680
+- 탈락 Micron (MU): strategy=추세, TEST=207.52%, PF=3.04, timing_p=0.383, q80=1.000
+- 탈락 AMD (AMD): strategy=추세, TEST=205.09%, PF=3.51, timing_p=0.049, q80=0.952
+- 탈락 LG이노텍 (011070.KS): strategy=돌파, TEST=189.88%, PF=8.48, timing_p=0.247, q80=0.952
+- 탈락 Caterpillar (CAT): strategy=돌파, TEST=68.67%, PF=5.62, timing_p=0.346, q80=0.954
+- 탈락 Broadcom (AVGO): strategy=추세, TEST=33.71%, PF=1.62, timing_p=0.309, q80=0.952
+- 탈락 삼성중공업 (010140.KS): strategy=추세, TEST=28.39%, PF=1.58, timing_p=0.272, q80=0.952
+- 탈락 하나금융지주 (086790.KS): strategy=반전, TEST=23.07%, PF=157.66, timing_p=0.469, q80=1.000
+- 탈락 신한지주 (055550.KS): strategy=반전, TEST=23.92%, PF=nan, timing_p=0.074, q80=0.952
+- 탈락 Alphabet (GOOGL): strategy=추세, TEST=33.01%, PF=1.70, timing_p=0.506, q80=1.000
+- 탈락 한화오션 (042660.KS): strategy=추세, TEST=22.29%, PF=1.47, timing_p=0.198, q80=0.952
+- 탈락 POSCO홀딩스 (005490.KS): strategy=돌파, TEST=28.84%, PF=8.22, timing_p=0.235, q80=0.952
+- 탈락 셀트리온 (068270.KS): strategy=반전, TEST=21.33%, PF=6.74, timing_p=0.086, q80=0.952
+- 탈락 한화에어로스페이스 (012450.KS): strategy=추세, TEST=11.41%, PF=1.34, timing_p=0.222, q80=0.952
+- 탈락 ExxonMobil (XOM): strategy=반전, TEST=21.21%, PF=nan, timing_p=0.123, q80=0.952
+- 탈락 Qualcomm (QCOM): strategy=추세, TEST=25.96%, PF=1.58, timing_p=0.136, q80=0.952

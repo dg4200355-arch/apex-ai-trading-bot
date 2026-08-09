@@ -23,6 +23,67 @@
     "forward_mdd": 0.0,
     "observations": 1,
     "last_signal_date": "2026-08-07",
-    "tracker_version": "paper-forward-1.0"
+    "tracker_version": "paper-forward-1.1-replay",
+    "trade_returns": [],
+    "registered_market_date": "2026-08-07",
+    "model_cutoff": "2026-08-07"
+  },
+  "V": {
+    "종목": "Visa",
+    "코드": "V",
+    "시장": "US",
+    "전략": "반전",
+    "전략파라미터": {
+      "bb": 0.25,
+      "rsi": 40
+    },
+    "등록시각UTC": "2026-08-09T06:08:48+00:00",
+    "registered_market_date": "2026-08-07",
+    "model_cutoff": "2026-08-07",
+    "position": false,
+    "entry_price": null,
+    "entry_date": null,
+    "pending_date": "2026-08-07",
+    "pending_signal": false,
+    "realized_equity": 1.0,
+    "completed_trades": 0,
+    "wins": 0,
+    "gross_profit": 0.0,
+    "gross_loss": 0.0,
+    "trade_returns": [],
+    "max_mark_equity": 1.0,
+    "forward_mdd": 0.0,
+    "observations": 1,
+    "last_signal_date": "2026-08-07",
+    "tracker_version": "paper-forward-1.1-replay"
+  },
+  "MA": {
+    "종목": "Mastercard",
+    "코드": "MA",
+    "시장": "US",
+    "전략": "반전",
+    "전략파라미터": {
+      "bb": 0.18,
+      "rsi": 38
+    },
+    "등록시각UTC": "2026-08-09T06:08:49+00:00",
+    "registered_market_date": "2026-08-07",
+    "model_cutoff": "2026-08-07",
+    "position": false,
+    "entry_price": null,
+    "entry_date": null,
+    "pending_date": "2026-08-07",
+    "pending_signal": false,
+    "realized_equity": 1.0,
+    "completed_trades": 0,
+    "wins": 0,
+    "gross_profit": 0.0,
+    "gross_loss": 0.0,
+    "trade_returns": [],
+    "max_mark_equity": 1.0,
+    "forward_mdd": 0.0,
+    "observations": 1,
+    "last_signal_date": "2026-08-07",
+    "tracker_version": "paper-forward-1.1-replay"
   }
 }

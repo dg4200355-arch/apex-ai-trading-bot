@@ -36,8 +36,8 @@ jobs:
         run: PYTHONPATH=. python tools/promotion_gate.py
       - name: Refresh correlation/concentration gate
         run: PYTHONPATH=. python tools/portfolio_gate.py
-      - name: Update raw-execution shadow paper broker
-        run: PYTHONPATH=. python tools/paper_broker_raw.py
+      - name: Update transactional raw-execution shadow paper broker
+        run: PYTHONPATH=. python tools/paper_broker_safe.py
       - name: Validate raw broker accounting and risk invariants
         run: PYTHONPATH=. python tools/broker_health.py
       - name: Upload paper-cycle reports
@@ -81,4 +81,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v1.4.1: raw execution migration trigger + corporate-action accounting + health gate
+# v1.4.2: transactional raw execution + corporate-action accounting + health gate

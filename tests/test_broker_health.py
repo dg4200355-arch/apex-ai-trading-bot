@@ -2,15 +2,31 @@ import pandas as pd
 
 from tools import broker_health as bh
 from tools import paper_broker as pb
+from tools import paper_broker_raw as raw
 
 
-def test_clean_new_state_passes_health_check():
+def raw_state():
     state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    raw.migrate_state_to_raw(state)
+    for account in state["accounts"].values():
+        account.setdefault("dividend_income", 0.0)
+    return state
+
+
+def test_clean_raw_state_passes_health_check():
+    state = raw_state()
     assert bh.validate_state(state, pd.DataFrame()) == []
 
 
-def test_duplicate_cluster_is_rejected():
+def test_legacy_price_basis_is_rejected():
     state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    errors = bh.validate_state(state, pd.DataFrame())
+    assert "price-basis-not-raw-execution" in errors
+    assert "broker-version-not-raw-execution" in errors
+
+
+def test_duplicate_cluster_is_rejected():
+    state = raw_state()
     a = state["accounts"]["US"]
     a["positions"] = {
         "V": {"qty": 1, "entry_price": 100.0, "cost_total": 100.2, "cluster": "C2"},
@@ -21,7 +37,7 @@ def test_duplicate_cluster_is_rejected():
 
 
 def test_drawdown_without_halt_is_rejected():
-    state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    state = raw_state()
     a = state["accounts"]["US"]
     a["max_drawdown"] = -0.12
     a["risk_halt"] = False
@@ -30,7 +46,7 @@ def test_drawdown_without_halt_is_rejected():
 
 
 def test_duplicate_filled_order_key_is_rejected():
-    state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    state = raw_state()
     orders = pd.DataFrame([
         {"체결일": "2026-08-10", "시장": "US", "코드": "V", "구분": "BUY", "상태": "FILLED"},
         {"체결일": "2026-08-10", "시장": "US", "코드": "V", "구분": "BUY", "상태": "FILLED"},

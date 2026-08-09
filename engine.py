@@ -18,6 +18,7 @@ FEATURES = [
     "range_pct", "market_ret5", "relative5",
 ]
 
+
 @dataclass
 class Perf:
     ret: float
@@ -26,6 +27,7 @@ class Perf:
     winrate: float
     pf: float
     sharpe: float
+
 
 @dataclass
 class StrategyChoice:
@@ -90,6 +92,24 @@ def make_features(raw: pd.DataFrame, market: pd.DataFrame, future: int = 5, targ
     d["future_return"] = d["Close"].shift(-future) / d["Close"] - 1
     d["target"] = (d["future_return"] > target_pct).astype(int)
     return d.replace([np.inf, -np.inf], np.nan).dropna()
+
+
+def split_holdout(data: pd.DataFrame, future: int = 5, train_fraction: float = 0.75) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Return (pretest, embargo, test) with no target overlap into holdout.
+
+    A target at row t uses Close[t+future], so the final `future` rows before the
+    holdout boundary are excluded from training/selection. The untouched test starts
+    at the original 75% boundary.
+    """
+    if data.empty:
+        return data.copy(), data.copy(), data.copy()
+    split = int(len(data) * train_fraction)
+    gap = max(1, int(future))
+    train_end = max(0, split - gap)
+    pretest = data.iloc[:train_end].copy()
+    embargo = data.iloc[train_end:split].copy()
+    test = data.iloc[split:].copy()
+    return pretest, embargo, test
 
 
 def _execution_returns(d: pd.DataFrame) -> pd.Series:
@@ -309,9 +329,9 @@ def select_ai(pretest: pd.DataFrame, future: int, fee: float, fast_mode: bool) -
 def analyze_frame(name: str, ticker: str, data: pd.DataFrame, future: int = 5, fee: float = 0.0015, fast_mode: bool = True) -> Dict[str, object]:
     if len(data) < 850:
         raise ValueError("데이터 부족")
-    split = int(len(data) * 0.75)
-    pretest = data.iloc[:split].copy()
-    test = data.iloc[split:].copy()
+    pretest, embargo, test = split_holdout(data, future=future, train_fraction=0.75)
+    if len(pretest) < 500:
+        raise ValueError("학습 구간 부족")
     if len(test) < 150:
         raise ValueError("최종 검증 구간 부족")
 
@@ -326,7 +346,11 @@ def analyze_frame(name: str, ticker: str, data: pd.DataFrame, future: int = 5, f
     if choice.kind == "AI":
         p = fit_ai_predict(pretest, test, fast_mode)
         test_auc = float(roc_auc_score(test["target"], p)) if test["target"].nunique() > 1 else np.nan
-        test_sig = (pd.Series(p, index=test.index) >= choice.params["threshold"]) & (test["Close"] > test["ema55"]) & test["rsi"].between(45, 78)
+        test_sig = (
+            (pd.Series(p, index=test.index) >= choice.params["threshold"])
+            & (test["Close"] > test["ema55"])
+            & test["rsi"].between(45, 78)
+        )
     else:
         full_sig = build_rule_signal(data, choice.kind, choice.params)
         test_sig = full_sig.reindex(test.index)
@@ -335,7 +359,11 @@ def analyze_frame(name: str, ticker: str, data: pd.DataFrame, future: int = 5, f
     ntest = len(test)
     edges = np.linspace(0, ntest, 4, dtype=int)
     test_sub = [
-        perf_from_signal(test.iloc[edges[i]:edges[i + 1]], test_sig.reindex(test.iloc[edges[i]:edges[i + 1]].index), fee)
+        perf_from_signal(
+            test.iloc[edges[i]:edges[i + 1]],
+            test_sig.reindex(test.iloc[edges[i]:edges[i + 1]].index),
+            fee,
+        )
         for i in range(3)
     ]
     test_positive_ratio = float(np.mean([p.ret > 0 for p in test_sub]))
@@ -414,6 +442,9 @@ def analyze_frame(name: str, ticker: str, data: pd.DataFrame, future: int = 5, f
         "샤프": test_perf.sharpe,
         "AI OOF AUC": choice.ai_oof_auc if choice.kind == "AI" else np.nan,
         "AI TEST AUC": test_auc if choice.kind == "AI" else np.nan,
+        "학습끝일": pd.Timestamp(pretest.index[-1]).date().isoformat(),
+        "TEST시작일": pd.Timestamp(test.index[0]).date().isoformat(),
+        "Embargo거래일": len(embargo),
         "탈락사유": "-" if passed else ", ".join(reasons),
         "점수": score,
     }
@@ -474,12 +505,17 @@ def run_self_tests() -> Dict[str, bool]:
     cols = FEATURES + ["ema20", "ema55", "donchian20", "donchian55"]
     out["causal_features"] = bool(np.allclose(f1.loc[common, cols], f2.loc[common, cols], equal_nan=True, rtol=1e-10, atol=1e-10))
 
+    idx2 = pd.date_range("2020-01-01", periods=1000, freq="B")
+    dummy = pd.DataFrame(index=idx2, data={"x": np.arange(1000)})
+    pre, emb, test = split_holdout(dummy, future=5)
+    out["holdout_embargo"] = len(emb) == 5 and pre.index[-1] < emb.index[0] < test.index[0]
+
     raw3 = synthetic_ohlcv(seed=7, n=1400, regime="random")
     market3 = synthetic_ohlcv(seed=8, n=1400, regime="random")
     data3 = make_features(raw3, market3, future=5)
     try:
         result = analyze_frame("SYN", "SYN", data3, future=5, fast_mode=True)
-        out["full_pipeline_smoke"] = result["통과"] in {"✅", "❌"}
+        out["full_pipeline_smoke"] = result["통과"] in {"✅", "❌"} and result["Embargo거래일"] == 5
     except ValueError as e:
         out["full_pipeline_smoke"] = "후보" in str(e) or "안정" in str(e)
     return out

@@ -2,10 +2,10 @@
 
 - engine_version: 8.5-frozen-primary
 - scan_mode: FULL80
-- run_at_utc: 2026-08-09T08:35:53+00:00
+- run_at_utc: 2026-08-09T21:57:42+00:00
 - universe: 80
 - result_rows: 80
-- valid-data normal rejections: 10
+- valid-data normal rejections: 9
 - true data/engine errors: 0
 - tickers with isolated OHLC repairs: 36
 - total repaired OHLC bars: 85

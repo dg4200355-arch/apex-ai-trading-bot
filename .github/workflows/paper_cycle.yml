@@ -112,9 +112,9 @@ jobs:
           git reset --hard origin/main
           mkdir -p reports
           cp -f /tmp/apex-paper-status/paper_pipeline_status.json reports/
-          if [ "$JOB_STATUS" = "success" ]; then
-            git rm -f --ignore-unmatch reports/failed_paper_broker.json || true
-          elif [ -f /tmp/apex-paper-status/failed_paper_broker.json ]; then
+          # Remove any diagnostic from an older run before considering this run's file.
+          git rm -f --ignore-unmatch reports/failed_paper_broker.json || true
+          if [ "$JOB_STATUS" != "success" ] && [ -f /tmp/apex-paper-status/failed_paper_broker.json ]; then
             cp -f /tmp/apex-paper-status/failed_paper_broker.json reports/
           fi
           git add reports/paper_pipeline_status.json
@@ -127,4 +127,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v1.4.8: heartbeat persistence verification trigger
+# v1.4.9: heartbeat diagnostics are current-run-only; stale failure files are removed first

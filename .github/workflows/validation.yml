@@ -42,7 +42,7 @@ jobs:
   autonomous-scan:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-scan]')
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,7 +50,7 @@ jobs:
           python-version: '3.11'
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Run Korea + US autonomous validation
+      - name: Run full Korea + US 80-stock validation
         run: PYTHONPATH=. python tools/autonomous_scan.py
       - name: Run second-stage robustness confirmation
         run: PYTHONPATH=. python tools/stress_confirm.py
@@ -90,8 +90,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No report changes"
           else
-            git commit -m "chore: refresh validation pipeline reports [skip ci]"
+            git commit -m "chore: refresh v8.4 validation pipeline reports [skip ci]"
             git push origin HEAD:main
           fi
 
-# v8.3: primary scan + stress confirmation + forward-only paper tracker + promotion gate
+# v8.4: full 80-stock global correction + stress confirmation + replay-safe paper tracker + bootstrap promotion gate

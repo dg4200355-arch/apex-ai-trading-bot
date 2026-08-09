@@ -2,10 +2,11 @@
 
 Every scheduled run scans the full liquid universe: 40 Korea + 40 US stocks.
 Benjamini-Hochberg adjustment uses a fixed family size of all 80 hypotheses,
-including names rejected before a timing p-value is produced. This is deliberately
-conservative and avoids making multiplicity easier by splitting the universe.
+including names rejected before a timing p-value is produced.
 
-No live orders are placed.
+The exact strategy parameters and exact market-data window selected in stage 1 are
+written into the primary report. Stage 2 must consume those frozen values instead
+of re-selecting a strategy. No live orders are placed.
 """
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,10 +15,13 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-from engine import analyze_frame, make_features, run_self_tests
+from engine import analyze_frame, make_features, run_self_tests, select_ai, select_rule
 
-ENGINE_VERSION = "8.4-full80"
+ENGINE_VERSION = "8.5-frozen-primary"
 FAMILY_SIZE = 80
+BASE_FEE = 0.0015
+FUTURE = 5
+TARGET_PCT = 0.01
 
 KOREA = {
     "삼성전자":"005930.KS","SK하이닉스":"000660.KS","현대차":"005380.KS","기아":"000270.KS",
@@ -52,7 +56,7 @@ def dl(ticker: str, period: str = "5y") -> pd.DataFrame:
     need = ["Open", "High", "Low", "Close", "Volume"]
     if any(c not in d.columns for c in need):
         raise RuntimeError(f"bad OHLCV: {ticker}")
-    return d[need].dropna()
+    return d[need].dropna().sort_index()
 
 
 def bh_qvalues(values, family_size: int = FAMILY_SIZE):
@@ -64,8 +68,6 @@ def bh_qvalues(values, family_size: int = FAMILY_SIZE):
     pv = p[valid]
     order = np.argsort(pv)
     ranked = pv[order]
-    # Use all 80 hypotheses as the family even when some names were rejected
-    # before producing a timing p-value. This can only make q-values stricter.
     m = max(int(family_size), len(ranked))
     raw = ranked * m / np.arange(1, len(ranked) + 1)
     adj = np.minimum.accumulate(raw[::-1])[::-1]
@@ -98,6 +100,25 @@ def apply_portfolio_control(df: pd.DataFrame, family_size: int = FAMILY_SIZE) ->
     return out
 
 
+def freeze_selected_choice(data: pd.DataFrame, expected_kind: str):
+    """Reproduce analyze_frame's deterministic pre-TEST selection on the same data.
+
+    This is called immediately after analyze_frame during the same run. The result
+    is serialized into the primary report so later stages never need to re-select.
+    """
+    split = int(len(data) * 0.75)
+    pretest = data.iloc[:split].copy()
+    rule = select_rule(pretest, data, BASE_FEE)
+    ai = select_ai(pretest, FUTURE, BASE_FEE, True) if pretest["target"].nunique() > 1 else None
+    choices = [c for c in (rule, ai) if c is not None]
+    if not choices:
+        raise ValueError("cannot freeze selected strategy")
+    choice = max(choices, key=lambda c: c.validation_score)
+    if choice.kind != expected_kind:
+        raise ValueError(f"selection mismatch: analyze={expected_kind}, freeze={choice.kind}")
+    return choice
+
+
 def main():
     checks = run_self_tests()
     if not checks or not all(checks.values()):
@@ -114,13 +135,19 @@ def main():
     for market_name, name, ticker, benchmark in cases:
         try:
             raw = dl(ticker)
-            data = make_features(raw, markets[benchmark], future=5, target_pct=.01)
-            result = analyze_frame(name, ticker, data, future=5, fee=.0015, fast_mode=True)
+            data = make_features(raw, markets[benchmark], future=FUTURE, target_pct=TARGET_PCT)
+            result = analyze_frame(name, ticker, data, future=FUTURE, fee=BASE_FEE, fast_mode=True)
+            choice = freeze_selected_choice(data, str(result["선택전략"]))
+            result["전략파라미터"] = json.dumps(choice.params, ensure_ascii=False, sort_keys=True)
+            result["전략검증점수"] = float(choice.validation_score)
+            result["데이터시작일"] = pd.Timestamp(raw.index[0]).date().isoformat()
+            result["데이터기준일"] = pd.Timestamp(raw.index[-1]).date().isoformat()
+            result["데이터행수"] = int(len(raw))
             result["시장"] = market_name
             result["실행시각UTC"] = run_at
             result["엔진버전"] = ENGINE_VERSION
             rows.append(result)
-            print(ticker, result.get("등급"), result.get("선택전략"), result.get("TEST수익"), result.get("탈락사유"))
+            print(ticker, result.get("등급"), result.get("선택전략"), result.get("전략파라미터"), result.get("TEST수익"))
         except Exception as e:
             errors.append({
                 "시장": market_name, "종목": name, "코드": ticker, "오류": repr(e),
@@ -144,7 +171,7 @@ def main():
     lines = [
         "# APEX autonomous validation summary", "",
         f"- engine_version: {ENGINE_VERSION}",
-        f"- scan_mode: FULL80",
+        "- scan_mode: FULL80",
         f"- run_at_utc: {run_at}",
         f"- universe: {FAMILY_SIZE}",
         f"- analyzed: {len(result)}",
@@ -158,8 +185,8 @@ def main():
         tp = r["타이밍p"] if np.isfinite(r["타이밍p"]) else float("nan")
         qv = r["다중검정q"] if np.isfinite(r["다중검정q"]) else float("nan")
         lines.append(
-            f"- {r['최종등급']} {r['종목']} ({r['코드']}): strategy={r['선택전략']}, "
-            f"TEST={r['TEST수익']:.2%}, PF={pf:.2f}, timing_p={tp:.3f}, q80={qv:.3f}"
+            f"- {r['최종등급']} {r['종목']} ({r['코드']}): strategy={r['선택전략']} {r['전략파라미터']}, "
+            f"TEST={r['TEST수익']:.2%}, PF={pf:.2f}, timing_p={tp:.3f}, q80={qv:.3f}, data_end={r['데이터기준일']}"
         )
     (out_dir / "latest_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))

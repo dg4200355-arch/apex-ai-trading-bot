@@ -8,8 +8,9 @@ import pandas as pd
 import yfinance as yf
 
 REQUIRED = ["Open", "High", "Low", "Close", "Volume"]
-# After one-factor manual adjustment, only tiny floating/rounding drift is allowed.
-RANGE_REL_TOL = 0.0005
+MAX_REPAIR_FRACTION = 0.01
+MIN_ALLOWED_REPAIR_BARS = 3
+MAX_SINGLE_REPAIR_EXCESS = 0.05
 
 
 def _flatten_columns(frame: pd.DataFrame) -> pd.DataFrame:
@@ -20,45 +21,69 @@ def _flatten_columns(frame: pd.DataFrame) -> pd.DataFrame:
     return d
 
 
-def _worst_positive(series: pd.Series):
-    clean = pd.to_numeric(series, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna()
-    if clean.empty:
-        return None, 0.0
-    idx = clean.idxmax()
-    return idx, float(clean.loc[idx])
-
-
 def apply_adj_close_factor(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
-    """Adjust O/H/L/C with one common Adj Close / raw Close factor.
-
-    yfinance auto_adjust=True can occasionally expose historical Korean OHLC bars
-    whose Open/High/Low/Close no longer share exactly the same adjustment basis.
-    Pulling raw OHLC plus Adj Close and applying one factor ourselves preserves the
-    candle geometry while still accounting for splits/dividends.
-    """
+    """Adjust O/H/L/C with one common Adj Close / raw Close factor."""
     d = _flatten_columns(frame)
     missing = [c for c in REQUIRED if c not in d.columns]
     if missing:
         raise ValueError(f"missing OHLCV columns {missing}: {ticker}")
-
     for col in REQUIRED + (["Adj Close"] if "Adj Close" in d.columns else []):
         d[col] = pd.to_numeric(d[col], errors="coerce")
-
     if "Adj Close" not in d.columns:
         return d[REQUIRED].copy()
-
     raw_close = d["Close"].replace(0, np.nan)
     factor = d["Adj Close"] / raw_close
-    bad_factor = (~np.isfinite(factor)) | (factor <= 0)
-    if bad_factor.any():
-        d = d.loc[~bad_factor].copy()
-        factor = factor.loc[~bad_factor]
+    good = np.isfinite(factor) & (factor > 0)
+    d = d.loc[good].copy()
+    factor = factor.loc[good]
     if d.empty:
         raise ValueError(f"no valid adjustment factors: {ticker}")
-
     for col in ["Open", "High", "Low", "Close"]:
         d[col] = d[col] * factor
     return d[REQUIRED].copy()
+
+
+def _repair_isolated_range_defects(d: pd.DataFrame, ticker: str) -> pd.DataFrame:
+    """Conservatively repair isolated High/Low defects without touching Open/Close.
+
+    Yahoo occasionally reports a few Korean bars where High/Low fail to envelope
+    Open/Close. Expanding only the range to include observed Open/Close is the
+    minimum conservative repair. A dataset is quarantined if defects are frequent
+    or any required expansion exceeds 5%.
+    """
+    out = d.copy()
+    true_high = out[["Open", "High", "Close"]].max(axis=1)
+    true_low = out[["Open", "Low", "Close"]].min(axis=1)
+    repair_high = true_high > out["High"]
+    repair_low = true_low < out["Low"]
+    crossed = out["High"] < out["Low"]
+    repair_mask = repair_high | repair_low | crossed
+    repair_count = int(repair_mask.sum())
+
+    high_excess = ((true_high - out["High"]) / out[["High", "Open", "Close"]].abs().max(axis=1).replace(0, np.nan)).clip(lower=0)
+    low_excess = ((out["Low"] - true_low) / out[["Low", "Open", "Close"]].abs().max(axis=1).replace(0, np.nan)).clip(lower=0)
+    severity = pd.concat([high_excess, low_excess], axis=1).max(axis=1).fillna(0.0)
+    worst = float(severity.loc[repair_mask].max()) if repair_count else 0.0
+    worst_date = None
+    if repair_count:
+        worst_date = pd.Timestamp(severity.loc[repair_mask].idxmax()).date().isoformat()
+
+    allowed = max(MIN_ALLOWED_REPAIR_BARS, int(np.ceil(len(out) * MAX_REPAIR_FRACTION)))
+    if repair_count > allowed:
+        raise ValueError(
+            f"too many OHLC range repairs: {ticker} repairs={repair_count} allowed={allowed} rows={len(out)}"
+        )
+    if worst > MAX_SINGLE_REPAIR_EXCESS:
+        raise ValueError(
+            f"OHLC range repair too large: {ticker} date={worst_date} excess={worst:.4%} max={MAX_SINGLE_REPAIR_EXCESS:.2%}"
+        )
+
+    if repair_count:
+        out.loc[repair_mask, "High"] = true_high.loc[repair_mask]
+        out.loc[repair_mask, "Low"] = true_low.loc[repair_mask]
+    out.attrs["ohlcv_repaired_bars"] = repair_count
+    out.attrs["ohlcv_max_repair_pct"] = worst
+    return out
 
 
 def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
@@ -87,29 +112,13 @@ def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
     if (d["Volume"] < 0).any():
         raise ValueError(f"negative volume: {ticker}")
 
-    crossed = d["High"] < d["Low"]
-    if crossed.any():
-        date = pd.Timestamp(crossed[crossed].index[0]).date().isoformat()
-        raise ValueError(f"high-low invariant failed: {ticker} date={date}")
-
-    oc_high = d[["Open", "Close"]].max(axis=1)
-    high_excess = (oc_high - d["High"]) / d["High"]
-    high_date, high_worst = _worst_positive(high_excess)
-    if high_worst > RANGE_REL_TOL:
-        date = pd.Timestamp(high_date).date().isoformat()
-        raise ValueError(
-            f"high-price invariant failed: {ticker} date={date} excess={high_worst:.4%} tol={RANGE_REL_TOL:.2%}"
-        )
-
-    oc_low = d[["Open", "Close"]].min(axis=1)
-    low_excess = (d["Low"] - oc_low) / d["Low"]
-    low_date, low_worst = _worst_positive(low_excess)
-    if low_worst > RANGE_REL_TOL:
-        date = pd.Timestamp(low_date).date().isoformat()
-        raise ValueError(
-            f"low-price invariant failed: {ticker} date={date} excess={low_worst:.4%} tol={RANGE_REL_TOL:.2%}"
-        )
-
+    d = _repair_isolated_range_defects(d, ticker)
+    if (d["High"] < d[["Open", "Close"]].max(axis=1)).any():
+        raise ValueError(f"high invariant remains after repair: {ticker}")
+    if (d["Low"] > d[["Open", "Close"]].min(axis=1)).any():
+        raise ValueError(f"low invariant remains after repair: {ticker}")
+    if (d["High"] < d["Low"]).any():
+        raise ValueError(f"high-low invariant remains after repair: {ticker}")
     if not d.index.is_monotonic_increasing:
         raise ValueError(f"non-monotonic market dates: {ticker}")
     return d

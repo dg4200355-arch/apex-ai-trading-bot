@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "paper-broker-1.0-shadow",
+  "version": "paper-broker-1.1-risk-stop",
   "initialized_at_utc": "2026-08-09T06:56:35+00:00",
   "accounts": {
     "KR": {
@@ -11,7 +11,10 @@
       "last_equity": 10000000.0,
       "positions": {},
       "realized_pnl": 0.0,
-      "completed_trades": 0
+      "completed_trades": 0,
+      "max_drawdown": 0.0,
+      "risk_halt": false,
+      "risk_halt_reason": null
     },
     "US": {
       "currency": "USD",
@@ -21,7 +24,10 @@
       "last_equity": 10000.0,
       "positions": {},
       "realized_pnl": 0.0,
-      "completed_trades": 0
+      "completed_trades": 0,
+      "max_drawdown": 0.0,
+      "risk_halt": false,
+      "risk_halt_reason": null
     }
   },
   "ticker_last_event": {

@@ -81,4 +81,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v1.4: test-gated raw execution fills + corporate-action accounting + broker health
+# v1.4.1: raw execution migration trigger + corporate-action accounting + health gate

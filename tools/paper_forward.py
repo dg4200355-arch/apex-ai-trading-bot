@@ -1,30 +1,32 @@
 """Forward-only paper tracker for candidates that pass second-stage confirmation.
 
-Once a candidate is admitted, its strategy family and parameters are frozen in
-paper_state.json. Future runs only process NEW market bars. Signals are decided
-at a completed close and changes are executed at the next available open.
-This is deliberately separate from the backtest/ranking loop to avoid reselecting
-history after seeing new outcomes.
+Once admitted, strategy family and parameters are frozen. Future runs process
+EVERY unseen completed market bar in chronological order. A close signal is
+executed only at the next available market open. If an automation run is missed,
+the next run replays the missing bars rather than skipping them.
+
+For AI candidates, the model training cutoff is frozen at admission so later
+market outcomes cannot leak back into the forward simulation.
 """
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
 import json
-from typing import Dict
+from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
 
-from engine import FEATURES, atr, build_rule_signal, ema, fit_ai_predict, make_features, rsi
+from engine import atr, build_rule_signal, ema, fit_ai_predict, make_features, rsi
 
 CONFIRM = Path("reports/latest_confirmation.csv")
 STATE_PATH = Path("reports/paper_state.json")
 LOG_PATH = Path("reports/paper_forward.csv")
 SUMMARY_PATH = Path("reports/paper_forward.md")
 FEE = 0.0015
-TRACKER_VERSION = "paper-forward-1.0"
+TRACKER_VERSION = "paper-forward-1.1-replay"
 
 
 def dl(ticker: str, period: str = "2y") -> pd.DataFrame:
@@ -41,7 +43,7 @@ def dl(ticker: str, period: str = "2y") -> pd.DataFrame:
 
 
 def make_live_features(raw: pd.DataFrame, market: pd.DataFrame) -> pd.DataFrame:
-    """Feature frame with no future target, so the newest completed bar is usable."""
+    """Feature frame with no future target; newest completed bar remains usable."""
     d = raw[["Open", "High", "Low", "Close", "Volume"]].copy().sort_index()
     m = market["Close"].pct_change().rename("market_ret1")
     d = d.join(m, how="left").ffill()
@@ -96,161 +98,235 @@ def load_log() -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def latest_signal(ticker: str, market_code: str, kind: str, params: dict) -> tuple[pd.Timestamp, bool, float, pd.DataFrame]:
+def mark_equity(s: dict, close_price: float) -> float:
+    realized = float(s.get("realized_equity", 1.0))
+    if bool(s.get("position")) and s.get("entry_price"):
+        gross = close_price / float(s["entry_price"]) - 1
+        return realized * (1 + gross - 2 * FEE)
+    return realized
+
+
+def _trade_pf(s: dict) -> float:
+    gp = float(s.get("gross_profit", 0.0))
+    gl = float(s.get("gross_loss", 0.0))
+    trades = int(s.get("completed_trades", 0))
+    if gl > 0:
+        return gp / gl
+    if trades > 0 and gp > 0:
+        return np.inf
+    return np.nan
+
+
+def _record_trade(s: dict, tr: float):
+    s["realized_equity"] = float(s.get("realized_equity", 1.0)) * (1 + tr)
+    s["completed_trades"] = int(s.get("completed_trades", 0)) + 1
+    returns = list(s.get("trade_returns", []))
+    returns.append(float(tr))
+    s["trade_returns"] = returns[-200:]
+    if tr > 0:
+        s["wins"] = int(s.get("wins", 0)) + 1
+        s["gross_profit"] = float(s.get("gross_profit", 0.0)) + tr
+    else:
+        s["gross_loss"] = float(s.get("gross_loss", 0.0)) + abs(tr)
+
+
+def _execute_pending_at_open(s: dict, open_price: float, date: pd.Timestamp):
+    if s.get("pending_date") is None:
+        return
+    desired = bool(s.get("pending_signal"))
+    position = bool(s.get("position"))
+    if desired and not position:
+        s["position"] = True
+        s["entry_price"] = float(open_price)
+        s["entry_date"] = pd.Timestamp(date).date().isoformat()
+    elif (not desired) and position:
+        entry = float(s["entry_price"])
+        tr = float(open_price) / entry - 1 - 2 * FEE
+        _record_trade(s, tr)
+        s["position"] = False
+        s["entry_price"] = None
+        s["entry_date"] = None
+    s["pending_date"] = None
+    s["pending_signal"] = None
+
+
+def replay_unseen_bars(
+    s: dict,
+    raw: pd.DataFrame,
+    live: pd.DataFrame,
+    signals: pd.Series,
+    dates: Iterable[pd.Timestamp],
+    now: str,
+) -> List[dict]:
+    """Replay new completed bars sequentially; no network calls inside."""
+    rows: List[dict] = []
+    for date in [pd.Timestamp(x) for x in dates]:
+        if date not in raw.index or date not in live.index:
+            continue
+
+        _execute_pending_at_open(s, float(raw.loc[date, "Open"]), date)
+        close_price = float(raw.loc[date, "Close"])
+        signal = bool(signals.loc[date])
+        date_str = date.date().isoformat()
+        s["pending_date"] = date_str
+        s["pending_signal"] = signal
+        s["last_signal_date"] = date_str
+        s["observations"] = int(s.get("observations", 0)) + 1
+
+        marked = mark_equity(s, close_price)
+        peak = max(float(s.get("max_mark_equity", 1.0)), marked)
+        s["max_mark_equity"] = peak
+        dd = marked / peak - 1 if peak > 0 else 0.0
+        s["forward_mdd"] = min(float(s.get("forward_mdd", 0.0)), dd)
+
+        trades = int(s.get("completed_trades", 0))
+        wins = int(s.get("wins", 0))
+        rows.append({
+            "시각UTC": now,
+            "종목": s.get("종목", "?"),
+            "코드": s.get("코드", "?"),
+            "시장": s.get("시장", "?"),
+            "전략": s.get("전략", "?"),
+            "신호기준일": date_str,
+            "종가신호": "보유/진입" if signal else "현금/청산",
+            "현재포지션": "LONG" if s.get("position") else "CASH",
+            "진입일": s.get("entry_date") or "-",
+            "관측거래일": int(s.get("observations", 0)),
+            "완료거래": trades,
+            "승률": wins / trades if trades else np.nan,
+            "PF": _trade_pf(s),
+            "전진누적수익": marked - 1,
+            "전진MDD": float(s.get("forward_mdd", 0.0)),
+            "업데이트": "NEW_BAR",
+            "트래커": TRACKER_VERSION,
+        })
+    return rows
+
+
+def _build_signal_series(ticker: str, market_code: str, s: dict) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
     raw = dl(ticker, "2y")
     market = dl(market_code, "2y")
     live = make_live_features(raw, market)
     if live.empty:
         raise RuntimeError("no live features")
-    latest = live.iloc[[-1]].copy()
-    latest_date = pd.Timestamp(latest.index[-1])
 
-    if kind == "AI":
-        raw5 = dl(ticker, "5y")
-        market5 = dl(market_code, "5y")
-        train = make_features(raw5, market5, future=5, target_pct=.01)
-        if len(train) < 500 or train["target"].nunique() < 2:
-            raise RuntimeError("AI training history unavailable")
-        p = float(fit_ai_predict(train, latest, True)[0])
-        signal = bool(
-            p >= float(params["threshold"])
-            and float(latest["Close"].iloc[0]) > float(latest["ema55"].iloc[0])
-            and 45 <= float(latest["rsi"].iloc[0]) <= 78
-        )
-    else:
-        full_sig = build_rule_signal(live, kind, params)
-        signal = bool(full_sig.iloc[-1])
+    kind = str(s["전략"])
+    params = dict(s["전략파라미터"])
+    if kind != "AI":
+        signals = build_rule_signal(live, kind, params).astype(bool)
+        return raw, live, signals
 
-    return latest_date, signal, float(latest["Close"].iloc[0]), raw
-
-
-def next_open_after(raw: pd.DataFrame, date_str: str):
-    d = pd.Timestamp(date_str)
-    later = raw.loc[raw.index > d]
-    if later.empty:
-        return None
-    idx = pd.Timestamp(later.index[0])
-    return idx, float(later["Open"].iloc[0])
+    raw5 = dl(ticker, "5y")
+    market5 = dl(market_code, "5y")
+    train = make_features(raw5, market5, future=5, target_pct=.01)
+    cutoff = pd.Timestamp(s.get("model_cutoff") or s.get("registered_market_date") or live.index[-1])
+    train = train.loc[train.index <= cutoff]
+    if len(train) < 500 or train["target"].nunique() < 2:
+        raise RuntimeError("frozen AI training history unavailable")
+    p = fit_ai_predict(train, live, True)
+    probs = pd.Series(p, index=live.index)
+    signals = (
+        (probs >= float(params["threshold"]))
+        & (live["Close"] > live["ema55"])
+        & live["rsi"].between(45, 78)
+    )
+    return raw, live, signals.astype(bool)
 
 
-def mark_equity(s: dict, close_price: float) -> float:
-    realized = float(s.get("realized_equity", 1.0))
-    if bool(s.get("position")) and s.get("entry_price"):
-        gross = close_price / float(s["entry_price"]) - 1
-        # include both estimated sides so current mark is conservative
-        return realized * (1 + gross - 2 * FEE)
-    return realized
-
-
-def process_candidate(state: Dict[str, dict], row: pd.Series) -> dict:
-    ticker = str(row["코드"])
-    kind = str(row["전략"])
+def _new_state(row: pd.Series, latest_date: pd.Timestamp, now: str) -> dict:
     params = json.loads(str(row["전략파라미터"]))
-    market = str(row["시장"])
-    market_code = "^KS11" if market == "KR" else "SPY"
+    return {
+        "종목": str(row["종목"]),
+        "코드": str(row["코드"]),
+        "시장": str(row["시장"]),
+        "전략": str(row["전략"]),
+        "전략파라미터": params,
+        "등록시각UTC": now,
+        "registered_market_date": latest_date.date().isoformat(),
+        "model_cutoff": latest_date.date().isoformat(),
+        "position": False,
+        "entry_price": None,
+        "entry_date": None,
+        "pending_date": None,
+        "pending_signal": None,
+        "realized_equity": 1.0,
+        "completed_trades": 0,
+        "wins": 0,
+        "gross_profit": 0.0,
+        "gross_loss": 0.0,
+        "trade_returns": [],
+        "max_mark_equity": 1.0,
+        "forward_mdd": 0.0,
+        "observations": 0,
+        "last_signal_date": None,
+        "tracker_version": TRACKER_VERSION,
+    }
+
+
+def process_candidate(state: Dict[str, dict], row: pd.Series) -> List[dict]:
+    ticker = str(row["코드"])
+    market_name = str(row["시장"])
+    market_code = "^KS11" if market_name == "KR" else "SPY"
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     if ticker not in state:
-        state[ticker] = {
-            "종목": str(row["종목"]),
-            "코드": ticker,
-            "시장": market,
-            "전략": kind,
-            "전략파라미터": params,
-            "등록시각UTC": now,
-            "position": False,
-            "entry_price": None,
-            "entry_date": None,
-            "pending_date": None,
-            "pending_signal": None,
-            "realized_equity": 1.0,
-            "completed_trades": 0,
-            "wins": 0,
-            "gross_profit": 0.0,
-            "gross_loss": 0.0,
-            "max_mark_equity": 1.0,
-            "forward_mdd": 0.0,
-            "observations": 0,
-            "last_signal_date": None,
-            "tracker_version": TRACKER_VERSION,
-        }
+        raw = dl(ticker, "2y")
+        market = dl(market_code, "2y")
+        live = make_live_features(raw, market)
+        if live.empty:
+            raise RuntimeError("no live features")
+        latest_date = pd.Timestamp(live.index[-1])
+        state[ticker] = _new_state(row, latest_date, now)
 
     s = state[ticker]
-    # Never mutate the frozen strategy after admission.
-    kind = str(s["전략"])
-    params = dict(s["전략파라미터"])
-    latest_date, signal, latest_close, raw = latest_signal(ticker, market_code, kind, params)
+    s.setdefault("코드", ticker)
+    s.setdefault("trade_returns", [])
+    s.setdefault("registered_market_date", s.get("last_signal_date"))
+    s.setdefault("model_cutoff", s.get("registered_market_date") or s.get("last_signal_date"))
+    s["tracker_version"] = TRACKER_VERSION
 
-    # Execute the PRIOR close decision only when the following market open is present.
-    if s.get("pending_date") is not None:
-        nxt = next_open_after(raw, str(s["pending_date"]))
-        if nxt is not None:
-            exec_date, exec_price = nxt
-            desired = bool(s.get("pending_signal"))
-            position = bool(s.get("position"))
-            if desired and not position:
-                s["position"] = True
-                s["entry_price"] = exec_price
-                s["entry_date"] = exec_date.date().isoformat()
-            elif (not desired) and position:
-                entry = float(s["entry_price"])
-                tr = exec_price / entry - 1 - 2 * FEE
-                s["realized_equity"] = float(s.get("realized_equity", 1.0)) * (1 + tr)
-                s["completed_trades"] = int(s.get("completed_trades", 0)) + 1
-                if tr > 0:
-                    s["wins"] = int(s.get("wins", 0)) + 1
-                    s["gross_profit"] = float(s.get("gross_profit", 0.0)) + tr
-                else:
-                    s["gross_loss"] = float(s.get("gross_loss", 0.0)) + abs(tr)
-                s["position"] = False
-                s["entry_price"] = None
-                s["entry_date"] = None
-            s["pending_date"] = None
-            s["pending_signal"] = None
+    raw, live, signals = _build_signal_series(ticker, market_code, s)
+    last = s.get("last_signal_date")
+    if last is None:
+        dates = [pd.Timestamp(live.index[-1])]
+    else:
+        last_ts = pd.Timestamp(last)
+        dates = [pd.Timestamp(x) for x in live.index if pd.Timestamp(x) > last_ts]
 
-    date_str = latest_date.date().isoformat()
-    if s.get("last_signal_date") != date_str:
-        s["pending_date"] = date_str
-        s["pending_signal"] = bool(signal)
-        s["last_signal_date"] = date_str
-        s["observations"] = int(s.get("observations", 0)) + 1
+    if dates:
+        return replay_unseen_bars(s, raw, live, signals, dates, now)
 
+    latest_date = pd.Timestamp(live.index[-1])
+    latest_close = float(raw.loc[latest_date, "Close"])
     marked = mark_equity(s, latest_close)
-    peak = max(float(s.get("max_mark_equity", 1.0)), marked)
-    s["max_mark_equity"] = peak
-    dd = marked / peak - 1 if peak > 0 else 0.0
-    s["forward_mdd"] = min(float(s.get("forward_mdd", 0.0)), dd)
     trades = int(s.get("completed_trades", 0))
     wins = int(s.get("wins", 0))
-    gp = float(s.get("gross_profit", 0.0))
-    gl = float(s.get("gross_loss", 0.0))
-    pf = gp / gl if gl > 0 else np.nan
-
-    return {
+    return [{
         "시각UTC": now,
-        "종목": s["종목"],
+        "종목": s.get("종목", ticker),
         "코드": ticker,
-        "시장": market,
-        "전략": kind,
-        "신호기준일": date_str,
-        "종가신호": "보유/진입" if signal else "현금/청산",
+        "시장": s.get("시장", market_name),
+        "전략": s.get("전략", "?"),
+        "신호기준일": s.get("last_signal_date") or latest_date.date().isoformat(),
+        "종가신호": "대기",
         "현재포지션": "LONG" if s.get("position") else "CASH",
         "진입일": s.get("entry_date") or "-",
         "관측거래일": int(s.get("observations", 0)),
         "완료거래": trades,
         "승률": wins / trades if trades else np.nan,
-        "PF": pf,
+        "PF": _trade_pf(s),
         "전진누적수익": marked - 1,
         "전진MDD": float(s.get("forward_mdd", 0.0)),
+        "업데이트": "NO_NEW_BAR",
         "트래커": TRACKER_VERSION,
-    }
+    }]
 
 
 def main():
     Path("reports").mkdir(exist_ok=True)
     state = load_state()
     old_log = load_log()
-    rows = []
+    rows: List[dict] = []
 
     if CONFIRM.exists():
         try:
@@ -264,57 +340,54 @@ def main():
         admitted = confirmation[confirmation["2차통과"] == "✅"]
         for _, row in admitted.iterrows():
             try:
-                rows.append(process_candidate(state, row))
+                rows.extend(process_candidate(state, row))
             except Exception as e:
                 rows.append({
                     "시각UTC": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                     "종목": row.get("종목", "?"), "코드": row.get("코드", "?"),
                     "시장": row.get("시장", "?"), "전략": row.get("전략", "?"),
-                    "오류": repr(e), "트래커": TRACKER_VERSION,
+                    "오류": repr(e), "업데이트": "ERROR", "트래커": TRACKER_VERSION,
                 })
 
-    # Continue tracking previously admitted candidates even if they are not in today's scan.
-    current_codes = {str(r.get("코드")) for r in rows if r.get("코드")}
+    touched = {str(r.get("코드")) for r in rows if r.get("코드")}
     for ticker, s in list(state.items()):
-        if ticker in current_codes:
+        if ticker in touched:
             continue
         pseudo = pd.Series({
             "종목": s["종목"], "코드": ticker, "시장": s["시장"], "전략": s["전략"],
             "전략파라미터": json.dumps(s["전략파라미터"], ensure_ascii=False),
         })
         try:
-            rows.append(process_candidate(state, pseudo))
+            rows.extend(process_candidate(state, pseudo))
         except Exception as e:
             rows.append({
                 "시각UTC": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "종목": s.get("종목", "?"), "코드": ticker, "시장": s.get("시장", "?"),
-                "전략": s.get("전략", "?"), "오류": repr(e), "트래커": TRACKER_VERSION,
+                "전략": s.get("전략", "?"), "오류": repr(e),
+                "업데이트": "ERROR", "트래커": TRACKER_VERSION,
             })
 
     save_state(state)
     new = pd.DataFrame(rows)
-    if not new.empty:
-        combined = pd.concat([old_log, new], ignore_index=True) if not old_log.empty else new
-    else:
-        combined = old_log
+    combined = pd.concat([old_log, new], ignore_index=True) if (not old_log.empty and not new.empty) else (new if not new.empty else old_log)
     combined.to_csv(LOG_PATH, index=False, encoding="utf-8-sig")
 
-    latest = new.copy()
     lines = [
         "# APEX forward-only paper tracker", "",
         f"- tracker: {TRACKER_VERSION}",
         f"- frozen candidates tracked: {len(state)}",
-        f"- rows updated this run: {len(new)}", "",
+        f"- rows written this run: {len(new)}", "",
     ]
-    if not latest.empty:
+    if not new.empty:
         lines += ["## Latest", ""]
-        for _, r in latest.iterrows():
-            if "오류" in r and pd.notna(r.get("오류")):
+        for _, r in new.tail(20).iterrows():
+            if pd.notna(r.get("오류")):
                 lines.append(f"- ERROR {r.get('종목')} ({r.get('코드')}): {r.get('오류')}")
             else:
                 lines.append(
-                    f"- {r['종목']} ({r['코드']}): signal={r['종가신호']}, position={r['현재포지션']}, "
-                    f"forward={r['전진누적수익']:.2%}, trades={int(r['완료거래'])}"
+                    f"- {r['종목']} ({r['코드']}): date={r['신호기준일']}, signal={r['종가신호']}, "
+                    f"position={r['현재포지션']}, forward={float(r['전진누적수익']):.2%}, "
+                    f"obs={int(r['관측거래일'])}, update={r['업데이트']}"
                 )
     SUMMARY_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))

@@ -114,4 +114,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v9.0.2: unit-gated FULL80 + exact purged freeze/confirmation + timing-safe paper broker
+# v9.0.3: unit-gated FULL80 + purged freeze/confirmation + fail-closed data safety + timing-safe paper broker

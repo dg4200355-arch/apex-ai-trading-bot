@@ -51,3 +51,26 @@ def test_random_pipeline_is_finite_or_strictly_rejected():
         assert result["통과"] in {"✅", "❌"}
     except ValueError as e:
         assert "후보" in str(e) or "검증" in str(e) or "데이터" in str(e)
+
+
+def test_random_walk_does_not_receive_a_grade_across_seeds():
+    grades = []
+    for seed in [100, 101, 102]:
+        raw = synthetic_ohlcv(seed=seed, n=1450, regime="random")
+        market = synthetic_ohlcv(seed=500 + seed, n=1450, regime="random")
+        data = make_features(raw, market, future=5)
+        try:
+            result = analyze_frame("RANDOM", str(seed), data, future=5, fast_mode=True)
+            grades.append(result["등급"])
+        except ValueError:
+            grades.append("탈락")
+    assert "A" not in grades, grades
+
+
+def test_structured_mean_reversion_is_not_over_rejected():
+    raw = synthetic_ohlcv(seed=101, n=1500, regime="mean_revert")
+    market = synthetic_ohlcv(seed=501, n=1500, regime="random")
+    data = make_features(raw, market, future=5)
+    result = analyze_frame("MR", "MR", data, future=5, fast_mode=True)
+    assert result["등급"] in {"A", "B", "관찰"}, result
+    assert result["TEST수익"] > 0

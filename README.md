@@ -77,9 +77,10 @@
 - 계좌 고점 대비 최대낙폭 -10% 도달 시 신규매수 영구 중지, 기존 포지션 청산은 허용
 
 ### 기업행동
-- 현금배당: 보유수량 기준 가상 현금/배당수익 반영(세금은 모델링하지 않음)
-- 주식분할: 정수 수량으로 안전하게 환산되는 경우 수량/진입단가 조정
-- fractional cash-in-lieu가 필요한 애매한 분할은 임의 계산하지 않고 fail-closed
+- 현금배당: 배당락일 장 시작 전 보유수량으로 권리를 확정하되 **그날 신규주문 크기 계산이 끝난 뒤** 가상 현금/배당수익에 반영합니다. Yahoo가 지급일 대신 배당락 이벤트를 제공하므로 같은 날 매수자금으로 미리 쓰지 않는 보수적 정책입니다. 세금은 모델링하지 않습니다.
+- 주식분할: raw 가격과 맞도록 장 시작 전 정수 수량/진입단가를 조정합니다.
+- 배당과 분할이 같은 날 동시에 표시되거나 fractional cash-in-lieu가 필요한 애매한 경우는 임의 계산하지 않고 fail-closed 처리합니다.
+- 기업행동 ledger로 동일 이벤트 중복 반영을 차단합니다.
 
 ### 트랜잭션 저장
 `paper_broker_safe.py`가 한 사이클을 메모리에서 먼저 계산합니다. 가격·기업행동·계좌평가 ERROR가 하나라도 있으면 **그 실행의 계좌 변경을 전부 폐기**하고 이전 정상 상태를 보존합니다.
@@ -94,7 +95,7 @@
 - 기업행동 ledger 중복
 - 중복 FILLED 주문키
 
-## 자동 실행
+## 자동 실행과 상태 heartbeat
 GitHub Actions:
 
 1. 평일 FULL80 파이프라인
@@ -105,6 +106,16 @@ GitHub Actions:
 
 두 작업은 같은 concurrency group을 사용해 계좌 상태를 동시에 수정하지 않습니다.
 
+정상 리포트는 성공했을 때만 갱신합니다. 실패했을 때는 기존 정상 결과를 덮지 않고 별도의 상태/진단만 저장합니다.
+
+- `reports/full_pipeline_status.json` — FULL80 최근 실행 성공/실패 heartbeat
+- `reports/paper_pipeline_status.json` — paper-cycle 최근 실행 성공/실패 heartbeat
+- `reports/failed_scan_errors.json` — FULL80 데이터/엔진 fail-closed 진단
+- `reports/failed_confirmation_errors.json` — 2차검증 fail-closed 진단
+- `reports/failed_paper_broker.json` — 모의브로커 트랜잭션 fail-closed 진단
+
+성공한 다음 실행에서는 과거 failure 파일을 자동 제거합니다.
+
 ## 주요 파일
 - `engine.py` — 전략/AI/누수방지 백테스트 엔진
 - `market_data.py` — adjusted research / raw execution 데이터 분리와 무결성 검사
@@ -113,8 +124,8 @@ GitHub Actions:
 - `tools/paper_forward.py` — forward-only 모의추적
 - `tools/promotion_gate.py` — 전진증거 게이트
 - `tools/portfolio_gate.py` — 상관/군집대표 게이트
-- `tools/paper_broker_raw.py` — raw 체결 및 기업행동 회계
-- `tools/paper_broker_safe.py` — 트랜잭션형 fail-closed 저장
+- `tools/paper_broker_raw.py` — raw 체결 및 기업행동 원시 함수
+- `tools/paper_broker_safe.py` — 배당 타이밍 + 트랜잭션형 fail-closed 저장
 - `tools/broker_health.py` — 계좌 회계·리스크 invariant 검사
 - `streamlit_app.py` — v9.1 웹 대시보드
 - `tests/` — 누수, embargo, 데이터, 체결, 기업행동, 계좌, 통계 테스트

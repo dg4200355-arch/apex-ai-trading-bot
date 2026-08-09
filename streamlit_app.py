@@ -17,10 +17,11 @@ CONFIRM_VERSION = "8.5-frozen-confirm"
 TRACKER_VERSION = "paper-forward-1.3-verification-timing"
 GATE_VERSION = "promotion-gate-1.3-frozen-admission"
 PORTFOLIO_VERSION = "portfolio-gate-1.1-cluster-leader"
-BROKER_VERSION = "paper-broker-1.3-verification-timing"
-HEALTH_VERSION = "broker-health-1.0"
+BROKER_VERSION = "paper-broker-1.4-raw-execution"
+HEALTH_VERSION = "broker-health-1.1-raw-execution"
+PRICE_BASIS = "RAW_EXECUTION"
 
-st.set_page_config(page_title="APEX Autonomous Validation v9.0", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="APEX Autonomous Validation v9.1", page_icon="🧠", layout="wide")
 st.markdown(
     """
     <meta name="google" content="notranslate">
@@ -112,7 +113,10 @@ def bh_qvalues(values):
 def render_primary():
     df = safe_csv("reports/latest_validation.csv")
     errors = safe_json("reports/latest_errors.json")
-    with st.expander("① 📡 80종목 전체 자동검증", expanded=True):
+    failed = safe_json("reports/failed_scan_errors.json")
+    with st.expander("① 📡 FULL80 · purge/embargo 자동검증", expanded=True):
+        if failed:
+            st.error("⛔ 최근 FULL80 실행은 fail-closed 처리됨 · 이전 정상 결과 유지")
         if df.empty:
             st.info("자동 스캔 결과 대기 중")
             return
@@ -123,20 +127,21 @@ def render_primary():
         c2.metric("결과행", f"{len(df)}개")
         c3.metric("진짜 오류", f"{len(errors) if isinstance(errors, list) else 0}개")
         c4.metric("A 통과", f"{int((df.get('최종통과', pd.Series(dtype=str)) == '✅').sum())}개")
-        st.caption(f"{version} · 2차 대상 {len(watch)}개 · 전략/파라미터/기준일 동결 · 고립 OHLC 결함만 제한 보정")
+        embargo = int(pd.to_numeric(df.get("Embargo거래일", pd.Series([5])), errors="coerce").dropna().iloc[0]) if "Embargo거래일" in df else 5
+        st.caption(f"{version} · 75% 경계 앞 {embargo}거래일 purge/embargo · 2차 대상 {len(watch)}개 · 오류 발생 시 정상 리포트 보존")
         if version != PRIMARY_VERSION:
             st.warning(f"현재 보고서 엔진 {version} · 기대 {PRIMARY_VERSION}")
         show = fmt(df, ["TEST수익", "MDD", "OHLC최대보정폭"], ["PF", "샤프", "타이밍p", "다중검정q"])
-        cols = [c for c in ["최종등급", "시장", "종목", "선택전략", "전략파라미터", "데이터기준일", "OHLC보정봉수", "OHLC최대보정폭", "TEST수익", "MDD", "TEST거래수", "PF", "샤프", "타이밍p", "다중검정q", "탈락사유"] if c in show]
+        cols = [c for c in ["최종등급", "시장", "종목", "선택전략", "전략파라미터", "학습끝일", "TEST시작일", "Embargo거래일", "데이터기준일", "OHLC보정봉수", "TEST수익", "MDD", "TEST거래수", "PF", "샤프", "타이밍p", "다중검정q", "탈락사유"] if c in show]
         st.dataframe(show[cols], use_container_width=True, hide_index=True)
-        if isinstance(errors, list) and errors:
-            with st.expander(f"진짜 데이터/엔진 오류 {len(errors)}개"):
-                st.json(errors)
 
 
 def render_confirmation():
     df = safe_csv("reports/latest_confirmation.csv")
-    with st.expander("② 🧪 동결 파라미터 2차 스트레스", expanded=True):
+    failed = safe_json("reports/failed_confirmation_errors.json")
+    with st.expander("② 🧪 동일 파라미터 · 동일 embargo 2차 스트레스", expanded=True):
+        if failed:
+            st.error("⛔ 최근 2차 검증은 fail-closed 처리됨 · 이전 정상 확인결과 유지")
         if df.empty:
             st.info("2차 결과 대기 중")
             return
@@ -147,9 +152,9 @@ def render_confirmation():
         c2.metric("확인후보", f"{len(confirmed)}개")
         c3.metric("엔진", version)
         if version != CONFIRM_VERSION:
-            st.warning(f"이전 2차 엔진 {version} · 기대 {CONFIRM_VERSION}")
+            st.warning(f"현재 2차 엔진 {version} · 기대 {CONFIRM_VERSION}")
         show = fmt(df, ["1차TEST수익", "재현TEST수익", "재현오차", "비용중앙수익", "파라미터양수비율", "10년양수비율", "10년중앙수익"])
-        cols = [c for c in ["2차통과", "2차등급", "종목", "전략", "전략파라미터", "1차데이터기준일", "재현오차", "비용중앙수익", "파라미터양수비율", "10년양수비율", "10년중앙수익", "10년거래수", "보류사유"] if c in show]
+        cols = [c for c in ["2차통과", "2차등급", "종목", "전략", "전략파라미터", "재현학습끝일", "재현TEST시작일", "재현Embargo거래일", "재현오차", "비용중앙수익", "파라미터양수비율", "10년양수비율", "10년중앙수익", "10년거래수", "보류사유"] if c in show]
         st.dataframe(show[cols], use_container_width=True, hide_index=True)
 
 
@@ -167,7 +172,7 @@ def render_forward():
         c1.metric("추적", f"{len(latest)}개")
         c2.metric("완료거래", f"{int(pd.to_numeric(latest.get('완료거래'), errors='coerce').fillna(0).sum())}회")
         c3.metric("최고 전진수익", pct(pd.to_numeric(latest.get("전진누적수익"), errors="coerce").max()))
-        st.caption(f"{tracker} · 인증/해제는 기준일 다음 거래일부터 효력 · 누락 거래일 순서대로 재생")
+        st.caption(f"{tracker} · 인증/해제는 기준일 다음 거래일부터 효력 · 누락 거래일 순차 재생")
         if tracker != TRACKER_VERSION:
             st.warning(f"현재 tracker {tracker} · 기대 {TRACKER_VERSION}")
         show = fmt(latest, ["승률", "전진누적수익", "전진MDD"], ["PF"])
@@ -213,22 +218,26 @@ def render_portfolio():
 def render_broker():
     state = safe_json("reports/paper_broker_state.json")
     health = safe_json("reports/paper_broker_health.json")
+    failed = safe_json("reports/failed_paper_broker.json")
     positions = safe_csv("reports/paper_positions.csv")
     orders = safe_csv("reports/paper_orders.csv")
     account_log = safe_csv("reports/paper_account.csv")
-    with st.expander("⑥ 🤖 위험제어 모의자동매매", expanded=True):
+    with st.expander("⑥ 🤖 RAW 체결가 모의자동매매", expanded=True):
+        if failed:
+            st.error("⛔ 최근 모의브로커 실행 실패 · 이전 정상 계좌 상태 보존")
         if not state:
             st.info("모의계좌 초기화 대기 중")
             return
         version = str(state.get("version", "legacy"))
-        if health.get("ok") is True:
-            st.success(f"✅ 회계·리스크 health 정상 · {health.get('version', HEALTH_VERSION)}")
+        basis = str(state.get("price_basis", "legacy"))
+        if health.get("ok") is True and health.get("version") == HEALTH_VERSION:
+            st.success(f"✅ 회계·리스크 health 정상 · {HEALTH_VERSION}")
         elif health:
             st.error("⛔ health 오류: " + ", ".join(map(str, health.get("errors", []))))
         else:
             st.warning("health 결과 대기 중")
-        if version != BROKER_VERSION:
-            st.warning(f"현재 broker {version} · 기대 {BROKER_VERSION}")
+        if version != BROKER_VERSION or basis != PRICE_BASIS:
+            st.warning(f"현재 {version} / {basis} · 기대 {BROKER_VERSION} / {PRICE_BASIS}")
 
         accounts = state.get("accounts", {})
         kr, us = accounts.get("KR", {}), accounts.get("US", {})
@@ -236,55 +245,51 @@ def render_broker():
         def ret(a):
             initial = float(a.get("initial_cash", 0.0)) if a else 0.0
             return equity(a) / initial - 1 if initial > 0 else np.nan
-        filled = orders[orders["상태"].astype(str) == "FILLED"] if not orders.empty and "상태" in orders else pd.DataFrame()
+        trade_fills = orders[(orders["상태"].astype(str) == "FILLED") & orders.get("구분", pd.Series(index=orders.index, dtype=str)).isin(["BUY", "SELL"])] if not orders.empty and "상태" in orders else pd.DataFrame()
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("KR 가상자산", money(equity(kr), "KRW"), pct(ret(kr)))
         c2.metric("US 가상자산", money(equity(us), "USD"), pct(ret(us)))
         c3.metric("보유", f"{len(positions)}종목")
-        c4.metric("누적체결", f"{len(filled)}건")
+        c4.metric("매매체결", f"{len(trade_fills)}건")
         halted = [m for m, a in accounts.items() if bool(a.get("risk_halt"))]
-        if halted:
-            st.error("⛔ 신규매수 중지: " + ", ".join(halted) + " · 청산만 허용")
-        else:
-            st.info("신규매수 위험중지 없음")
-        st.caption(f"{version} · 실계좌 주문 NEVER · 종목당 25% · 현금 10% · 시장별 3종목 · 동일상관군 1종목 · 수수료 0.15% + 슬리피지 0.05% · 계좌 -10% DD 신규매수 중지 · 인증해제는 다음 거래일 시가 강제청산")
+        st.error("⛔ 신규매수 중지: " + ", ".join(halted) + " · 청산만 허용") if halted else st.info("신규매수 위험중지 없음")
+        st.caption(
+            f"{version} · {basis} · 실계좌 주문 NEVER · 종목당 25% · 현금 10% · 시장별 3종목 · "
+            "동일상관군 1종목 · 편도 수수료 0.15% + 슬리피지 0.05% · -10% DD 신규매수 중지 · "
+            "배당 현금반영 · 정수형 분할 수량조정 · 오류 시 트랜잭션 전체 폐기"
+        )
 
-        account_rows = []
+        rows = []
         for market, a in accounts.items():
-            eq = equity(a)
-            peak = float(a.get("peak_equity", eq))
-            account_rows.append({
+            eq = equity(a); peak = float(a.get("peak_equity", eq)); initial = float(a.get("initial_cash", eq))
+            rows.append({
                 "시장": market, "통화": a.get("currency"), "현금": float(a.get("cash", 0.0)), "총자산": eq,
-                "누적수익률": ret(a), "현재낙폭": eq / peak - 1 if peak > 0 else 0.0,
-                "최대낙폭": float(a.get("max_drawdown", 0.0)), "신규매수중지": "⛔" if a.get("risk_halt") else "-",
+                "누적수익률": eq / initial - 1 if initial > 0 else np.nan,
+                "현재낙폭": eq / peak - 1 if peak > 0 else 0.0, "최대낙폭": float(a.get("max_drawdown", 0.0)),
+                "배당수익": float(a.get("dividend_income", 0.0)), "신규매수중지": "⛔" if a.get("risk_halt") else "-",
                 "보유종목수": len(a.get("positions", {})), "완료거래": int(a.get("completed_trades", 0)),
                 "실현손익": float(a.get("realized_pnl", 0.0)),
             })
-        st.dataframe(fmt(pd.DataFrame(account_rows), ["누적수익률", "현재낙폭", "최대낙폭"]), use_container_width=True, hide_index=True)
+        st.dataframe(fmt(pd.DataFrame(rows), ["누적수익률", "현재낙폭", "최대낙폭"]), use_container_width=True, hide_index=True)
         st.markdown("**현재 보유**")
         st.info("CASH") if positions.empty else st.dataframe(positions, use_container_width=True, hide_index=True)
-        st.markdown("**최근 주문**")
-        st.info("아직 주문 없음") if orders.empty else st.dataframe(orders.tail(20), use_container_width=True, hide_index=True)
+        st.markdown("**최근 주문·기업행동**")
+        st.info("아직 이벤트 없음") if orders.empty else st.dataframe(orders.tail(25), use_container_width=True, hide_index=True)
         if not account_log.empty:
             with st.expander("계좌 기록"):
                 st.dataframe(fmt(account_log.tail(30), ["누적수익률", "현재낙폭", "최대낙폭"]), use_container_width=True, hide_index=True)
 
 
-st.title("🧠 APEX Autonomous Validation v9.0")
-st.caption("80종목 → 동결 2차 → 전진검증 → 통계게이트 → 상관위험 → timing-safe 모의자동매매")
-st.warning("연구·모의투자용입니다. 미래 수익을 보장하지 않으며 실계좌 주문 기능은 없습니다.")
+st.title("🧠 APEX Autonomous Validation v9.1")
+st.caption("FULL80 → 5-bar purge/embargo → 동결 2차 → 전진검증 → 통계게이트 → 상관위험 → RAW 체결가 모의자동매매")
+st.warning("연구·모의투자용입니다. 실제 주문을 전송하지 않으며 미래 수익을 보장하지 않습니다.")
 checks = run_self_tests()
 if not checks or not all(checks.values()):
     st.error(f"엔진 자가검증 실패: {checks}")
     st.stop()
 st.success(f"엔진 자가검증 통과 · {sum(checks.values())}/{len(checks)}")
 
-render_primary()
-render_confirmation()
-render_forward()
-render_gate()
-render_portfolio()
-render_broker()
+render_primary(); render_confirmation(); render_forward(); render_gate(); render_portfolio(); render_broker()
 
 with st.sidebar:
     st.header("수동 검증")
@@ -299,7 +304,7 @@ with st.sidebar:
     run = st.button("🚀 수동 검증", type="primary")
 
 if not run:
-    st.info("자동 파이프라인은 평일마다 ①→⑥을 갱신하고 한국장 마감 후 빠른 모의사이클을 추가 실행합니다.")
+    st.info("자동 파이프라인은 평일 FULL80 검증과 한국장 마감 후 빠른 RAW 모의사이클을 자동 실행합니다.")
     st.stop()
 
 if market_choice == "한국 40종목":
@@ -322,19 +327,17 @@ try:
             data = make_features(raw, market, future, target_pct)
             row = analyze_frame(name, ticker, data, future, fee, fast_mode)
             row["OHLC보정봉수"] = int(raw.attrs.get("ohlcv_repaired_bars", 0))
-            row["OHLC최대보정폭"] = float(raw.attrs.get("ohlcv_max_repair_pct", 0.0))
             rows.append(row)
-        except Exception as e:
-            errors.append(f"{name}: {e}")
+        except Exception as exc:
+            errors.append(f"{name}: {exc}")
     progress.progress(1.0, text="검증 완료")
-except Exception as e:
-    st.error(f"시장 데이터 오류: {e}")
+except Exception as exc:
+    st.error(f"시장 데이터 오류: {exc}")
     st.stop()
 
 if not rows:
     st.error("분석 가능한 종목이 없습니다.")
-    if errors:
-        st.code("\n".join(errors))
+    if errors: st.code("\n".join(errors))
     st.stop()
 
 result = pd.DataFrame(rows)
@@ -343,13 +346,11 @@ result["최종등급"] = ["A" if g == "A" and np.isfinite(q) and q <= .20 else (
 result["최종통과"] = np.where(result["최종등급"] == "A", "✅", "❌")
 result = result.sort_values("점수", ascending=False).reset_index(drop=True)
 c1, c2, c3 = st.columns(3)
-c1.metric("검사", f"{len(result)}개")
-c2.metric("A 통과", f"{int((result['최종통과'] == '✅').sum())}개")
-c3.metric("오류", f"{len(errors)}개")
-show = fmt(result, ["TEST수익", "최근63일", "MDD", "승률", "OHLC최대보정폭"], ["PF", "샤프", "타이밍p", "다중검정q", "점수"])
-cols = [c for c in ["최종통과", "최종등급", "종목", "코드", "선택전략", "OHLC보정봉수", "OHLC최대보정폭", "TEST수익", "최근63일", "MDD", "TEST거래수", "승률", "PF", "샤프", "타이밍p", "다중검정q", "탈락사유", "점수"] if c in show]
+c1.metric("검사", f"{len(result)}개"); c2.metric("A 통과", f"{int((result['최종통과'] == '✅').sum())}개"); c3.metric("오류", f"{len(errors)}개")
+show = fmt(result, ["TEST수익", "최근63일", "MDD", "승률"], ["PF", "샤프", "타이밍p", "다중검정q", "점수"])
+cols = [c for c in ["최종통과", "최종등급", "종목", "코드", "선택전략", "학습끝일", "TEST시작일", "Embargo거래일", "TEST수익", "MDD", "TEST거래수", "승률", "PF", "샤프", "타이밍p", "다중검정q", "탈락사유", "점수"] if c in show]
 st.dataframe(show[cols], use_container_width=True, hide_index=True)
-st.download_button("검증 결과 CSV", result.to_csv(index=False).encode("utf-8-sig"), "apex_v90_manual_validation.csv", "text/csv")
+st.download_button("검증 결과 CSV", result.to_csv(index=False).encode("utf-8-sig"), "apex_v91_manual_validation.csv", "text/csv")
 if errors:
     with st.expander(f"분석 제외 {len(errors)}개"):
         st.code("\n".join(errors))

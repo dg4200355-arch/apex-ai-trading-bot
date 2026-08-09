@@ -46,10 +46,8 @@ def test_same_cluster_simultaneous_signals_only_first_admission_fills(monkeypatc
         "MA": {"frozen_verified": True, "quarantine_reason": None, "등록시각UTC": "2026-08-09T02:00:00+00:00"},
     }
     clusters = {"V": "C2", "MA": "C2"}
-
     monkeypatch.setattr(pb, "price_on", lambda cache, ticker, date, field: 100.0)
     orders, accounts = pb.process_events(state, events, candidates, clusters)
-
     filled = [x for x in orders if x["구분"] == "BUY" and x["상태"] == "FILLED"]
     blocked = [x for x in orders if x["구분"] == "BUY" and x["상태"] == "BLOCKED"]
     assert len(filled) == 1
@@ -59,6 +57,27 @@ def test_same_cluster_simultaneous_signals_only_first_admission_fills(monkeypatc
     assert blocked[0]["사유"] == "CLUSTER_OCCUPIED"
     assert set(state["accounts"]["US"]["positions"]) == {"V"}
     assert len(accounts) == 1
+
+
+def test_revoked_verification_forces_exit_even_if_tracker_stays_long(monkeypatch):
+    state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    account = state["accounts"]["US"]
+    buy, err = pb.execute_buy(account, "V", "US", "C2", 100.0, "2026-08-09")
+    assert err is None and buy is not None
+    state["ticker_last_event"]["V"] = "2026-08-09"
+    events = pd.DataFrame([
+        {"날짜": "2026-08-10", "시장": "US", "코드": "V", "현재포지션": "LONG", "동결검증": "LEGACY_LOCKED"},
+    ])
+    candidates = {
+        "V": {"frozen_verified": False, "quarantine_reason": "parameter drift", "등록시각UTC": "2026-08-09T01:00:00+00:00"},
+    }
+    monkeypatch.setattr(pb, "price_on", lambda cache, ticker, date, field: 100.0)
+    orders, _ = pb.process_events(state, events, candidates, {"V": "C2"})
+    sells = [x for x in orders if x["구분"] == "SELL" and x["상태"] == "FILLED"]
+    assert len(sells) == 1
+    assert sells[0]["사유"] == "VERIFICATION_REVOKED"
+    assert "V" not in account["positions"]
+    assert account["completed_trades"] == 1
 
 
 def test_hard_drawdown_permanently_halts_new_buys_but_not_state():

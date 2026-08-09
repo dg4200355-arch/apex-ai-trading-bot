@@ -1,8 +1,10 @@
-"""Central market-data download and OHLCV integrity checks for APEX.
+"""Central market-data download and integrity checks for APEX.
 
 Research/backtests use dividend/split-adjusted OHLC so indicators and historical
 returns are comparable. Shadow-broker executions use immutable raw trade prices;
-past fills must never be rewritten by a later dividend adjustment.
+past fills must never be rewritten by a later dividend adjustment. Corporate
+actions are exposed separately so the paper account can credit dividends and
+adjust quantities for stock splits.
 """
 from __future__ import annotations
 
@@ -49,7 +51,6 @@ def apply_adj_close_factor(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFra
 
 
 def _repair_isolated_range_defects(d: pd.DataFrame, ticker: str) -> pd.DataFrame:
-    """Conservatively repair isolated High/Low defects without touching Open/Close."""
     out = d.copy()
     true_high = out[["Open", "High", "Close"]].max(axis=1)
     true_low = out[["Open", "Low", "Close"]].min(axis=1)
@@ -63,20 +64,15 @@ def _repair_isolated_range_defects(d: pd.DataFrame, ticker: str) -> pd.DataFrame
     low_excess = ((out["Low"] - true_low) / out[["Low", "Open", "Close"]].abs().max(axis=1).replace(0, np.nan)).clip(lower=0)
     severity = pd.concat([high_excess, low_excess], axis=1).max(axis=1).fillna(0.0)
     worst = float(severity.loc[repair_mask].max()) if repair_count else 0.0
-    worst_date = None
-    if repair_count:
-        worst_date = pd.Timestamp(severity.loc[repair_mask].idxmax()).date().isoformat()
+    worst_date = pd.Timestamp(severity.loc[repair_mask].idxmax()).date().isoformat() if repair_count else None
 
     allowed = max(MIN_ALLOWED_REPAIR_BARS, int(np.ceil(len(out) * MAX_REPAIR_FRACTION)))
     if repair_count > allowed:
-        raise ValueError(
-            f"too many OHLC range repairs: {ticker} repairs={repair_count} allowed={allowed} rows={len(out)}"
-        )
+        raise ValueError(f"too many OHLC range repairs: {ticker} repairs={repair_count} allowed={allowed} rows={len(out)}")
     if worst > MAX_SINGLE_REPAIR_EXCESS:
         raise ValueError(
             f"OHLC range repair too large: {ticker} date={worst_date} excess={worst:.4%} max={MAX_SINGLE_REPAIR_EXCESS:.2%}"
         )
-
     if repair_count:
         out.loc[repair_mask, "High"] = true_high.loc[repair_mask]
         out.loc[repair_mask, "Low"] = true_low.loc[repair_mask]
@@ -104,13 +100,11 @@ def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
     d = d.replace([np.inf, -np.inf], np.nan).dropna()
     if len(d) < 2:
         raise ValueError(f"insufficient clean OHLCV: {ticker}")
-
     prices = d[["Open", "High", "Low", "Close"]]
     if (prices <= 0).any().any():
         raise ValueError(f"non-positive price: {ticker}")
     if (d["Volume"] < 0).any():
         raise ValueError(f"negative volume: {ticker}")
-
     d = _repair_isolated_range_defects(d, ticker)
     if (d["High"] < d[["Open", "Close"]].max(axis=1)).any():
         raise ValueError(f"high invariant remains after repair: {ticker}")
@@ -129,12 +123,13 @@ def _download_yahoo(
     period: Optional[str] = None,
     start: Optional[str] = None,
     end: Optional[str] = None,
+    actions: bool = False,
 ) -> pd.DataFrame:
     kwargs = {
         "tickers": ticker,
         "interval": "1d",
         "auto_adjust": False,
-        "actions": False,
+        "actions": actions,
         "progress": False,
         "threads": False,
     }
@@ -155,7 +150,7 @@ def download_ohlcv(
     end: Optional[str] = None,
 ) -> pd.DataFrame:
     """Adjusted OHLCV for research, model features, and historical validation."""
-    raw = _download_yahoo(ticker, period=period, start=start, end=end)
+    raw = _download_yahoo(ticker, period=period, start=start, end=end, actions=False)
     adjusted = apply_adj_close_factor(raw, ticker)
     out = normalize_ohlcv(adjusted, ticker)
     out.attrs["price_basis"] = "ADJUSTED_RESEARCH"
@@ -169,13 +164,36 @@ def download_trade_ohlcv(
     start: Optional[str] = None,
     end: Optional[str] = None,
 ) -> pd.DataFrame:
-    """Raw unadjusted OHLCV for paper fills and account valuation.
-
-    Historical raw opens/closes are stable execution prices. This prevents a later
-    dividend adjustment from rewriting an already-recorded paper fill.
-    """
-    raw = _download_yahoo(ticker, period=period, start=start, end=end)
+    """Raw unadjusted OHLCV for paper fills and account valuation."""
+    raw = _download_yahoo(ticker, period=period, start=start, end=end, actions=False)
     d = _flatten_columns(raw)
     out = normalize_ohlcv(d[REQUIRED].copy(), ticker)
     out.attrs["price_basis"] = "RAW_EXECUTION"
+    return out
+
+
+def download_trade_actions(
+    ticker: str,
+    *,
+    period: Optional[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> pd.DataFrame:
+    """Dividend and split events aligned to raw execution dates.
+
+    Missing action columns are interpreted as zero, never as a synthetic event.
+    """
+    raw = _download_yahoo(ticker, period=period, start=start, end=end, actions=True)
+    d = _flatten_columns(raw)
+    idx = pd.to_datetime(d.index)
+    if getattr(idx, "tz", None) is not None:
+        idx = idx.tz_localize(None)
+    out = pd.DataFrame(index=idx)
+    out["Dividends"] = pd.to_numeric(d["Dividends"], errors="coerce").fillna(0.0).to_numpy() if "Dividends" in d else 0.0
+    out["Stock Splits"] = pd.to_numeric(d["Stock Splits"], errors="coerce").fillna(0.0).to_numpy() if "Stock Splits" in d else 0.0
+    out = out.sort_index()
+    if out.index.has_duplicates:
+        raise ValueError(f"duplicate corporate-action dates: {ticker}")
+    if (out["Dividends"] < 0).any() or (out["Stock Splits"] < 0).any():
+        raise ValueError(f"invalid corporate action: {ticker}")
     return out

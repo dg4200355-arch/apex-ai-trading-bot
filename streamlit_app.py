@@ -1,6 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -8,7 +9,7 @@ import yfinance as yf
 
 from engine import analyze_frame, make_features, run_self_tests
 
-st.set_page_config(page_title="APEX Autonomous Validation v8", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="APEX Autonomous Validation v8.1", page_icon="🧠", layout="wide")
 st.markdown(
     """
     <meta name="google" content="notranslate">
@@ -109,7 +110,45 @@ def apply_portfolio_control(result):
     return result
 
 
-st.title("🧠 APEX Autonomous Validation v8")
+def show_saved_report():
+    path = Path("reports/latest_validation.csv")
+    if not path.exists():
+        st.info("첫 자동 시장 스캔 결과를 기다리는 중입니다. 수동 검증은 지금도 실행할 수 있습니다.")
+        return
+    try:
+        auto = pd.read_csv(path)
+        if auto.empty:
+            return
+        run_at = str(auto["실행시각UTC"].iloc[0]) if "실행시각UTC" in auto.columns else "기록 없음"
+        strict = auto[auto["최종통과"] == "✅"] if "최종통과" in auto.columns else auto.iloc[0:0]
+        watch = auto[auto["최종등급"].isin(["A", "B", "관찰"])] if "최종등급" in auto.columns else auto.iloc[0:0]
+        with st.expander("📡 최신 자동 시장 스캔", expanded=True):
+            st.caption(f"마지막 자동 실행(UTC): {run_at}")
+            a1,a2,a3,a4 = st.columns(4)
+            a1.metric("자동 검사", f"{len(auto)}개")
+            a2.metric("A 통과", f"{len(strict)}개")
+            a3.metric("관찰 이상", f"{len(watch)}개")
+            a4.metric("최고 TEST", pct(pd.to_numeric(auto.get("TEST수익"), errors="coerce").max()))
+            if len(strict):
+                st.success("자동 스캔에서 A등급 후보가 발견됐습니다. 실제 자금 투입 전 모의검증은 계속 필요합니다.")
+            elif len(watch):
+                st.warning("A등급은 없고 관찰 후보만 있습니다. 현재 행동은 실매수 보류입니다.")
+            else:
+                st.error("자동 스캔 기준으로 통계적 후보가 없습니다. 현재 행동은 관망입니다.")
+            display = auto.copy()
+            for col in ["TEST수익","최근63일","MDD","승률"]:
+                if col in display.columns:
+                    display[col] = pd.to_numeric(display[col], errors="coerce").apply(pct)
+            for col in ["PF","샤프","타이밍p","다중검정q","점수"]:
+                if col in display.columns:
+                    display[col] = pd.to_numeric(display[col], errors="coerce").apply(lambda x: "-" if not np.isfinite(x) else f"{x:.3f}")
+            cols = [c for c in ["최종통과","최종등급","시장","종목","코드","선택전략","TEST수익","최근63일","MDD","TEST거래수","PF","샤프","타이밍p","다중검정q","탈락사유"] if c in display.columns]
+            st.dataframe(display[cols], use_container_width=True, hide_index=True)
+    except Exception as e:
+        st.warning(f"저장된 자동 리포트를 읽지 못했습니다: {e}")
+
+
+st.title("🧠 APEX Autonomous Validation v8.1")
 st.caption("자가 테스트 → 다중전략 경쟁 → purged OOF AI 검증 → 완전 분리 TEST → 타이밍 순열검정 → 종목군 다중검정 보정")
 st.warning("연구·모의투자용입니다. A등급도 미래 수익을 보장하지 않으며 실계좌 주문 기능은 없습니다.")
 
@@ -119,6 +158,8 @@ if checks and all(checks.values()):
 else:
     st.error(f"엔진 자가검증 실패: {checks}")
     st.stop()
+
+show_saved_report()
 
 with st.sidebar:
     st.header("자동 검증 범위")
@@ -133,7 +174,7 @@ with st.sidebar:
     run = st.button("🚀 자율 검증 실행", type="primary")
 
 if not run:
-    st.info("왼쪽 메뉴에서 범위만 고르고 '자율 검증 실행'을 누르면 나머지는 자동으로 처리합니다.")
+    st.info("자동 리포트는 평일 아침 갱신됩니다. 필요할 때만 왼쪽 메뉴에서 수동 자율 검증을 실행하세요.")
     st.stop()
 
 if market_choice == "한국 40종목":
@@ -175,11 +216,11 @@ result = result.sort_values(["최종통과", "점수"], ascending=[True, False])
 strict = result[result["최종통과"] == "✅"]
 watch = result[result["최종등급"].isin(["A", "B", "관찰"])]
 
-c1,c2,c3,c4 = st.columns(4)
-c1.metric("검사", f"{len(result)}개")
-c2.metric("A 통과", f"{len(strict)}개")
-c3.metric("관찰 이상", f"{len(watch)}개")
-c4.metric("최고 TEST", pct(result["TEST수익"].max()))
+c1,c2,c3,c4=st.columns(4)
+c1.metric("검사",f"{len(result)}개")
+c2.metric("A 통과",f"{len(strict)}개")
+c3.metric("관찰 이상",f"{len(watch)}개")
+c4.metric("최고 TEST",pct(result["TEST수익"].max()))
 
 if len(strict):
     st.success("A등급 후보가 있습니다. 다만 실제 자금 투입 전에는 일정 기간 모의투자가 필요합니다.")
@@ -188,24 +229,24 @@ elif len(watch):
 else:
     st.error("통계적으로 남은 후보가 없습니다. 앱의 행동은 '관망'입니다.")
 
-show = result.copy()
+show=result.copy()
 for col in ["사전중앙수익","사전양수비율","TEST수익","TEST구간양수비율","TEST구간중앙수익","최근63일","매수보유","MDD","승률"]:
-    show[col] = show[col].apply(pct)
+    show[col]=show[col].apply(pct)
 for col in ["PF","샤프","AI OOF AUC","AI TEST AUC","타이밍p","다중검정q","점수"]:
-    show[col] = show[col].apply(lambda x: "-" if not np.isfinite(x) else f"{x:.3f}")
+    show[col]=show[col].apply(lambda x:"-" if not np.isfinite(x) else f"{x:.3f}")
 
-cols = [
+cols=[
     "최종통과","최종등급","종목","코드","선택전략","사전중앙수익","TEST수익","TEST구간양수비율",
     "최근63일","MDD","TEST거래수","승률","PF","샤프","타이밍p","다중검정q",
     "AI OOF AUC","AI TEST AUC","탈락사유","점수"
 ]
-st.dataframe(show[cols], use_container_width=True, hide_index=True)
+st.dataframe(show[cols],use_container_width=True,hide_index=True)
 
 st.subheader("선택 전략 분포")
 st.bar_chart(result["선택전략"].value_counts())
 
 st.subheader("상위 후보 TEST 수익")
-st.bar_chart(result.set_index("종목")[["TEST수익"]].head(12) * 100)
+st.bar_chart(result.set_index("종목")[["TEST수익"]].head(12)*100)
 
 st.download_button(
     "검증 결과 CSV",

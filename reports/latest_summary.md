@@ -2,10 +2,11 @@
 
 - engine_version: 8.5-frozen-primary
 - scan_mode: FULL80
-- run_at_utc: 2026-08-09T07:32:52+00:00
+- run_at_utc: 2026-08-09T07:35:22+00:00
 - universe: 80
-- analyzed: 41
-- rejected/errors before result row: 39
+- result_rows: 44
+- valid-data normal rejections: 3
+- true data/engine errors: 36
 - A-grade passed after global correction: 0
 - watch-or-better: 4
 

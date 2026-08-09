@@ -82,3 +82,5 @@ jobs:
             git commit -m "chore: refresh autonomous validation and confirmation report [skip ci]"
             git push origin HEAD:main
           fi
+
+# v8.3: primary scan plus frozen-strategy stress confirmation

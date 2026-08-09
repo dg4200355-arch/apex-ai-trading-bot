@@ -12,7 +12,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from engine import analyze_frame, make_features, run_self_tests, select_ai, select_rule
+from engine import analyze_frame, make_features, run_self_tests, select_ai, select_rule, split_holdout
 from market_data import download_ohlcv
 
 ENGINE_VERSION = "8.5-frozen-primary"
@@ -46,6 +46,7 @@ USA = {
 NORMAL_REJECTION_MESSAGES = {
     "안정적인 후보 전략 없음",
     "데이터 부족",
+    "학습 구간 부족",
     "최종 검증 구간 부족",
 }
 
@@ -96,8 +97,12 @@ def apply_portfolio_control(df: pd.DataFrame, family_size: int = FAMILY_SIZE) ->
 
 
 def freeze_selected_choice(data: pd.DataFrame, expected_kind: str):
-    split = int(len(data) * 0.75)
-    pretest = data.iloc[:split].copy()
+    """Recreate stage-1 selection with the exact same purged holdout boundary."""
+    pretest, embargo, test = split_holdout(data, future=FUTURE, train_fraction=0.75)
+    if len(embargo) != FUTURE:
+        raise ValueError(f"freeze embargo mismatch: {len(embargo)} != {FUTURE}")
+    if pretest.empty or test.empty:
+        raise ValueError("cannot freeze strategy on empty purged split")
     rule = select_rule(pretest, data, BASE_FEE)
     ai = select_ai(pretest, FUTURE, BASE_FEE, True) if pretest["target"].nunique() > 1 else None
     choices = [c for c in (rule, ai) if c is not None]
@@ -116,7 +121,8 @@ def normal_rejection_row(name: str, ticker: str, reason: str) -> dict:
         "TEST구간양수비율": np.nan, "TEST구간중앙수익": np.nan, "타이밍p": 1.0,
         "최근63일": np.nan, "매수보유": np.nan, "MDD": np.nan, "TEST거래수": 0,
         "승률": np.nan, "PF": np.nan, "샤프": np.nan, "AI OOF AUC": np.nan,
-        "AI TEST AUC": np.nan, "탈락사유": reason, "점수": -999.0,
+        "AI TEST AUC": np.nan, "학습끝일": "-", "TEST시작일": "-", "Embargo거래일": FUTURE,
+        "탈락사유": reason, "점수": -999.0,
         "전략파라미터": "{}", "전략검증점수": np.nan,
     }
 
@@ -192,6 +198,7 @@ def main():
         f"- universe: {FAMILY_SIZE}", f"- result_rows: {len(result)}",
         f"- valid-data normal rejections: {normal_rejects}", f"- true data/engine errors: {len(errors)}",
         f"- tickers with isolated OHLC repairs: {repaired_rows}", f"- total repaired OHLC bars: {total_repairs}",
+        f"- selection split: 75% boundary with {FUTURE}-bar purge/embargo",
         f"- A-grade passed after global correction: {len(strict)}", f"- watch-or-better: {len(watch)}", "",
         "## Top candidates", "",
     ]
@@ -203,7 +210,7 @@ def main():
         lines.append(
             f"- {r['최종등급']} {r['종목']} ({r['코드']}): strategy={r['선택전략']} {r['전략파라미터']}, "
             f"TEST={test_ret:.2%}, PF={pf:.2f}, timing_p={tp:.3f}, q80={qv:.3f}, "
-            f"repairs={int(r['OHLC보정봉수'])}, data_end={r['데이터기준일']}"
+            f"repairs={int(r['OHLC보정봉수'])}, embargo={int(r.get('Embargo거래일', FUTURE))}, data_end={r['데이터기준일']}"
         )
     (out_dir / "latest_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))

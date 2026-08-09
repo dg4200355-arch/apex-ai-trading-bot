@@ -8,10 +8,17 @@ import pandas as pd
 import yfinance as yf
 
 REQUIRED = ["Open", "High", "Low", "Close", "Volume"]
-# yfinance auto-adjusted OHLC can contain small range mismatches from vendor
-# adjustment/rounding, especially on some Korean listings. 0.5% is tolerated;
-# larger inconsistencies are still rejected as corrupted bars.
+# yfinance auto-adjusted OHLC can contain small Open/Close-vs-range mismatches
+# from vendor adjustment/rounding, especially on some Korean listings.
 RANGE_REL_TOL = 0.005
+
+
+def _worst_positive(series: pd.Series):
+    clean = pd.to_numeric(series, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna()
+    if clean.empty:
+        return None, 0.0
+    idx = clean.idxmax()
+    return idx, float(clean.loc[idx])
 
 
 def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
@@ -43,17 +50,31 @@ def normalize_ohlcv(frame: pd.DataFrame, ticker: str = "?") -> pd.DataFrame:
     if (d["Volume"] < 0).any():
         raise ValueError(f"negative volume: {ticker}")
 
-    # High must never be materially below Low.
-    if (d["High"] < d["Low"] * (1 - RANGE_REL_TOL)).any():
-        raise ValueError(f"high-low invariant failed: {ticker}")
+    # High/Low come from the same adjusted bar and must never cross.
+    crossed = d["High"] < d["Low"]
+    if crossed.any():
+        date = pd.Timestamp(crossed[crossed].index[0]).date().isoformat()
+        raise ValueError(f"high-low invariant failed: {ticker} date={date}")
 
-    # Open/Close may differ from adjusted High/Low by tiny vendor-rounding amounts.
-    upper = d["High"] * (1 + RANGE_REL_TOL)
-    lower = d["Low"] * (1 - RANGE_REL_TOL)
-    if ((d["Open"] > upper) | (d["Close"] > upper)).any():
-        raise ValueError(f"high-price invariant failed: {ticker}")
-    if ((d["Open"] < lower) | (d["Close"] < lower)).any():
-        raise ValueError(f"low-price invariant failed: {ticker}")
+    # Open/Close may sit very slightly outside adjusted High/Low due to vendor
+    # rounding. Measure and reject only a material relative excess.
+    oc_high = d[["Open", "Close"]].max(axis=1)
+    high_excess = (oc_high - d["High"]) / d["High"]
+    high_date, high_worst = _worst_positive(high_excess)
+    if high_worst > RANGE_REL_TOL:
+        date = pd.Timestamp(high_date).date().isoformat()
+        raise ValueError(
+            f"high-price invariant failed: {ticker} date={date} excess={high_worst:.4%} tol={RANGE_REL_TOL:.2%}"
+        )
+
+    oc_low = d[["Open", "Close"]].min(axis=1)
+    low_excess = (d["Low"] - oc_low) / d["Low"]
+    low_date, low_worst = _worst_positive(low_excess)
+    if low_worst > RANGE_REL_TOL:
+        date = pd.Timestamp(low_date).date().isoformat()
+        raise ValueError(
+            f"low-price invariant failed: {ticker} date={date} excess={low_worst:.4%} tol={RANGE_REL_TOL:.2%}"
+        )
 
     if not d.index.is_monotonic_increasing:
         raise ValueError(f"non-monotonic market dates: {ticker}")

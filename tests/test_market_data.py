@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from market_data import RANGE_REL_TOL, normalize_ohlcv
+from market_data import RANGE_REL_TOL, apply_adj_close_factor, normalize_ohlcv
 
 
 def good_frame():
@@ -28,11 +28,24 @@ def test_duplicate_dates_are_rejected():
         normalize_ohlcv(d, "TEST")
 
 
-def test_small_adjusted_range_mismatch_is_tolerated():
+def test_one_adj_close_factor_preserves_candle_geometry_and_volume():
     d = good_frame()
-    d.loc[d.index[1], "High"] = 101.7
+    d["Adj Close"] = d["Close"] * pd.Series([0.5, 0.8, 1.0], index=d.index)
+    adjusted = apply_adj_close_factor(d, "TEST")
+    assert adjusted.loc[d.index[0], "Open"] == pytest.approx(50.0)
+    assert adjusted.loc[d.index[0], "High"] == pytest.approx(51.0)
+    assert adjusted.loc[d.index[0], "Low"] == pytest.approx(49.5)
+    assert adjusted.loc[d.index[0], "Close"] == pytest.approx(50.5)
+    assert adjusted.loc[d.index[0], "Volume"] == 1000
+    out = normalize_ohlcv(adjusted, "TEST")
+    assert len(out) == 3
+
+
+def test_small_post_adjustment_rounding_mismatch_is_tolerated():
+    d = good_frame()
+    d.loc[d.index[1], "High"] = 101.97
     d.loc[d.index[1], "Close"] = 102.0
-    assert (102.0 / 101.7 - 1) < RANGE_REL_TOL
+    assert (102.0 / 101.97 - 1) < RANGE_REL_TOL
     out = normalize_ohlcv(d, "TEST")
     assert len(out) == 3
 

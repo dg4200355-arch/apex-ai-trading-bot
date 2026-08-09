@@ -24,7 +24,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Compile Python entrypoints
-        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py tools/portfolio_gate.py tools/paper_broker.py
+        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py tools/portfolio_gate.py tools/paper_broker.py tools/broker_health.py
       - run: PYTHONPATH=. pytest -q
 
   market-smoke:
@@ -65,6 +65,8 @@ jobs:
         run: PYTHONPATH=. python tools/portfolio_gate.py
       - name: Update autonomous shadow paper broker
         run: PYTHONPATH=. python tools/paper_broker.py
+      - name: Validate shadow broker accounting and risk invariants
+        run: PYTHONPATH=. python tools/broker_health.py
       - name: Upload validation report
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,6 +95,8 @@ jobs:
           cp -f reports/paper_account.csv /tmp/apex-report/
           cp -f reports/paper_positions.csv /tmp/apex-report/
           cp -f reports/paper_broker.md /tmp/apex-report/
+          cp -f reports/paper_broker_health.json /tmp/apex-report/
+          cp -f reports/paper_broker_health.md /tmp/apex-report/
           if [ -f reports/paper_orders.csv ]; then cp -f reports/paper_orders.csv /tmp/apex-report/; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -100,13 +104,13 @@ jobs:
           git reset --hard origin/main
           mkdir -p reports
           cp -f /tmp/apex-report/* reports/
-          git add reports/latest_validation.csv reports/latest_errors.json reports/latest_summary.md reports/latest_confirmation.csv reports/latest_confirmation.md reports/paper_state.json reports/paper_forward.csv reports/paper_forward.md reports/promotion_status.csv reports/promotion_status.md reports/portfolio_risk.csv reports/portfolio_risk.md reports/paper_broker_state.json reports/paper_account.csv reports/paper_positions.csv reports/paper_broker.md
+          git add reports/latest_validation.csv reports/latest_errors.json reports/latest_summary.md reports/latest_confirmation.csv reports/latest_confirmation.md reports/paper_state.json reports/paper_forward.csv reports/paper_forward.md reports/promotion_status.csv reports/promotion_status.md reports/portfolio_risk.csv reports/portfolio_risk.md reports/paper_broker_state.json reports/paper_account.csv reports/paper_positions.csv reports/paper_broker.md reports/paper_broker_health.json reports/paper_broker_health.md
           if [ -f reports/paper_orders.csv ]; then git add reports/paper_orders.csv; fi
           if git diff --cached --quiet; then
             echo "No report changes"
           else
-            git commit -m "chore: refresh v8.7 validation and shadow paper broker reports [skip ci]"
+            git commit -m "chore: refresh v8.8 validation and shadow paper reports [skip ci]"
             git push origin HEAD:main
           fi
 
-# v8.7.1: autonomous validation plus account-level shadow paper trading with preserved state
+# v8.8: tolerant adjusted-OHLC integrity + frozen validation + risk-stopped shadow paper broker + health gate

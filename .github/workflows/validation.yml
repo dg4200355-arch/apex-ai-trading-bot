@@ -5,7 +5,8 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '17 22 * * 0'
+    # 06:30 KST, Monday-Friday (21:30 UTC, Sunday-Thursday)
+    - cron: '30 21 * * 0-4'
 
 jobs:
   unit:
@@ -30,3 +31,25 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: PYTHONPATH=. python tools/live_validation.py
+
+  autonomous-scan:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-scan]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Run Korea + US autonomous validation
+        run: PYTHONPATH=. python tools/autonomous_scan.py
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-autonomous-validation
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14

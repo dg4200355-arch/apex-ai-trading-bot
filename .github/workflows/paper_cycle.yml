@@ -1,0 +1,71 @@
+name: APEX paper trading cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 16:40 KST Monday-Friday = 07:40 UTC Monday-Friday
+    - cron: '40 7 * * 1-5'
+
+permissions:
+  contents: write
+
+jobs:
+  paper-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: apex-autonomous-scan-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Replay newly completed forward bars
+        run: PYTHONPATH=. python tools/paper_forward.py
+      - name: Refresh forward evidence gate
+        run: PYTHONPATH=. python tools/promotion_gate.py
+      - name: Refresh correlation/concentration gate
+        run: PYTHONPATH=. python tools/portfolio_gate.py
+      - name: Update shadow paper broker
+        run: PYTHONPATH=. python tools/paper_broker.py
+      - name: Upload paper-cycle reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-paper-cycle
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Persist paper state on newest main
+        if: success()
+        run: |
+          mkdir -p /tmp/apex-paper
+          cp -f reports/paper_state.json /tmp/apex-paper/
+          cp -f reports/paper_forward.csv /tmp/apex-paper/
+          cp -f reports/paper_forward.md /tmp/apex-paper/
+          cp -f reports/promotion_status.csv /tmp/apex-paper/
+          cp -f reports/promotion_status.md /tmp/apex-paper/
+          cp -f reports/portfolio_risk.csv /tmp/apex-paper/
+          cp -f reports/portfolio_risk.md /tmp/apex-paper/
+          cp -f reports/paper_broker_state.json /tmp/apex-paper/
+          cp -f reports/paper_account.csv /tmp/apex-paper/
+          cp -f reports/paper_positions.csv /tmp/apex-paper/
+          cp -f reports/paper_broker.md /tmp/apex-paper/
+          if [ -f reports/paper_orders.csv ]; then cp -f reports/paper_orders.csv /tmp/apex-paper/; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+          mkdir -p reports
+          cp -f /tmp/apex-paper/* reports/
+          git add reports/paper_state.json reports/paper_forward.csv reports/paper_forward.md reports/promotion_status.csv reports/promotion_status.md reports/portfolio_risk.csv reports/portfolio_risk.md reports/paper_broker_state.json reports/paper_account.csv reports/paper_positions.csv reports/paper_broker.md
+          if [ -f reports/paper_orders.csv ]; then git add reports/paper_orders.csv; fi
+          if git diff --cached --quiet; then
+            echo "No paper-state changes"
+          else
+            git commit -m "chore: refresh post-close shadow paper cycle [skip ci]"
+            git push origin HEAD:main
+          fi

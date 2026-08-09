@@ -24,7 +24,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Compile Python entrypoints
-        run: python -m py_compile engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py
+        run: python -m py_compile market_data.py engine.py streamlit_app.py tools/live_validation.py tools/autonomous_scan.py tools/stress_confirm.py tools/paper_forward.py tools/promotion_gate.py
       - run: PYTHONPATH=. pytest -q
 
   market-smoke:
@@ -97,4 +97,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v8.5: full80 + exact parameter/data-window freeze + immutable stress confirmation + frozen-admission paper gate
+# v8.5: full80 + data integrity + exact parameter/data-window freeze + immutable confirmation + frozen-admission gate

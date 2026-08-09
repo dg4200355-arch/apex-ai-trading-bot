@@ -1,11 +1,13 @@
 """Autonomous real-market validation runner.
 
-Scans one rotating half of the Korea+US 40-stock universes (20 KR + 20 US per run),
-applies Benjamini-Hochberg multiple-testing control, and writes CSV/Markdown reports.
-Adjacent weekday runs cover the other half, so the full 80-stock universe is revisited
-roughly every two scan days. No live orders are placed.
+Every scheduled run scans the full liquid universe: 40 Korea + 40 US stocks.
+Benjamini-Hochberg adjustment uses a fixed family size of all 80 hypotheses,
+including names rejected before a timing p-value is produced. This is deliberately
+conservative and avoids making multiplicity easier by splitting the universe.
+
+No live orders are placed.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 import json
 import numpy as np
@@ -14,8 +16,8 @@ import yfinance as yf
 
 from engine import analyze_frame, make_features, run_self_tests
 
-ENGINE_VERSION = "8.2-next-open"
-KST = timezone(timedelta(hours=9))
+ENGINE_VERSION = "8.4-full80"
+FAMILY_SIZE = 80
 
 KOREA = {
     "삼성전자":"005930.KS","SK하이닉스":"000660.KS","현대차":"005380.KS","기아":"000270.KS",
@@ -47,10 +49,13 @@ def dl(ticker: str, period: str = "5y") -> pd.DataFrame:
     if isinstance(d.columns, pd.MultiIndex):
         d.columns = d.columns.get_level_values(0)
     d.columns = [str(c).title() for c in d.columns]
-    return d[["Open", "High", "Low", "Close", "Volume"]].dropna()
+    need = ["Open", "High", "Low", "Close", "Volume"]
+    if any(c not in d.columns for c in need):
+        raise RuntimeError(f"bad OHLCV: {ticker}")
+    return d[need].dropna()
 
 
-def bh_qvalues(values):
+def bh_qvalues(values, family_size: int = FAMILY_SIZE):
     p = np.asarray(values, dtype=float)
     q = np.full(len(p), np.nan)
     valid = np.isfinite(p)
@@ -59,18 +64,20 @@ def bh_qvalues(values):
     pv = p[valid]
     order = np.argsort(pv)
     ranked = pv[order]
-    m = len(ranked)
-    raw = ranked * m / np.arange(1, m + 1)
+    # Use all 80 hypotheses as the family even when some names were rejected
+    # before producing a timing p-value. This can only make q-values stricter.
+    m = max(int(family_size), len(ranked))
+    raw = ranked * m / np.arange(1, len(ranked) + 1)
     adj = np.minimum.accumulate(raw[::-1])[::-1]
-    out = np.empty(m)
+    out = np.empty(len(ranked))
     out[order] = np.clip(adj, 0, 1)
     q[np.where(valid)[0]] = out
     return q
 
 
-def apply_portfolio_control(df: pd.DataFrame) -> pd.DataFrame:
+def apply_portfolio_control(df: pd.DataFrame, family_size: int = FAMILY_SIZE) -> pd.DataFrame:
     out = df.copy()
-    out["다중검정q"] = bh_qvalues(out["타이밍p"].to_numpy())
+    out["다중검정q"] = bh_qvalues(out["타이밍p"].to_numpy(), family_size)
     final_grade, final_pass = [], []
     for _, row in out.iterrows():
         grade, q = row["등급"], row["다중검정q"]
@@ -86,12 +93,9 @@ def apply_portfolio_control(df: pd.DataFrame) -> pd.DataFrame:
         final_pass.append("✅" if ok else "❌")
     out["최종등급"] = final_grade
     out["최종통과"] = final_pass
+    out["검정패밀리"] = family_size
+    out["스캔모드"] = "FULL80"
     return out
-
-
-def selected_half(items, cohort: int):
-    midpoint = len(items) // 2
-    return items[:midpoint] if cohort == 0 else items[midpoint:]
 
 
 def main():
@@ -99,16 +103,11 @@ def main():
     if not checks or not all(checks.values()):
         raise SystemExit(f"self-tests failed: {checks}")
 
-    now_utc = datetime.now(timezone.utc).replace(microsecond=0)
-    now_kst = now_utc.astimezone(KST)
-    cohort = now_kst.toordinal() % 2
-    cohort_label = "A" if cohort == 0 else "B"
-    run_at = now_utc.isoformat()
-
-    kr_items = selected_half(list(KOREA.items()), cohort)
-    us_items = selected_half(list(USA.items()), cohort)
-    cases = [("KR", name, ticker, "^KS11") for name, ticker in kr_items]
-    cases += [("US", name, ticker, "SPY") for name, ticker in us_items]
+    run_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    cases = [("KR", name, ticker, "^KS11") for name, ticker in KOREA.items()]
+    cases += [("US", name, ticker, "SPY") for name, ticker in USA.items()]
+    if len(cases) != FAMILY_SIZE:
+        raise SystemExit(f"universe size mismatch: {len(cases)} != {FAMILY_SIZE}")
 
     markets = {"^KS11": dl("^KS11"), "SPY": dl("SPY")}
     rows, errors = [], []
@@ -120,17 +119,19 @@ def main():
             result["시장"] = market_name
             result["실행시각UTC"] = run_at
             result["엔진버전"] = ENGINE_VERSION
-            result["코호트"] = cohort_label
             rows.append(result)
             print(ticker, result.get("등급"), result.get("선택전략"), result.get("TEST수익"), result.get("탈락사유"))
         except Exception as e:
-            errors.append({"시장": market_name, "종목": name, "코드": ticker, "오류": repr(e), "실행시각UTC": run_at, "엔진버전": ENGINE_VERSION, "코호트": cohort_label})
+            errors.append({
+                "시장": market_name, "종목": name, "코드": ticker, "오류": repr(e),
+                "실행시각UTC": run_at, "엔진버전": ENGINE_VERSION,
+            })
             print(ticker, "ERROR", repr(e))
 
     if not rows:
         raise SystemExit("no analyzable market rows")
 
-    result = apply_portfolio_control(pd.DataFrame(rows))
+    result = apply_portfolio_control(pd.DataFrame(rows), FAMILY_SIZE)
     result = result.sort_values(["최종통과", "점수"], ascending=[True, False]).reset_index(drop=True)
 
     out_dir = Path("reports")
@@ -141,26 +142,24 @@ def main():
     strict = result[result["최종통과"] == "✅"]
     watch = result[result["최종등급"].isin(["A", "B", "관찰"])]
     lines = [
-        "# APEX autonomous validation summary",
-        "",
+        "# APEX autonomous validation summary", "",
         f"- engine_version: {ENGINE_VERSION}",
-        f"- cohort: {cohort_label}",
+        f"- scan_mode: FULL80",
         f"- run_at_utc: {run_at}",
+        f"- universe: {FAMILY_SIZE}",
         f"- analyzed: {len(result)}",
-        f"- A-grade passed: {len(strict)}",
-        f"- watch-or-better: {len(watch)}",
-        f"- data/errors: {len(errors)}",
-        "",
-        "## Top candidates",
-        "",
+        f"- rejected/errors before result row: {len(errors)}",
+        f"- A-grade passed after global correction: {len(strict)}",
+        f"- watch-or-better: {len(watch)}", "",
+        "## Top candidates", "",
     ]
-    for _, r in result.head(12).iterrows():
+    for _, r in result.head(15).iterrows():
         pf = r["PF"] if np.isfinite(r["PF"]) else float("nan")
         tp = r["타이밍p"] if np.isfinite(r["타이밍p"]) else float("nan")
         qv = r["다중검정q"] if np.isfinite(r["다중검정q"]) else float("nan")
         lines.append(
             f"- {r['최종등급']} {r['종목']} ({r['코드']}): strategy={r['선택전략']}, "
-            f"TEST={r['TEST수익']:.2%}, PF={pf:.2f}, timing_p={tp:.3f}, q={qv:.3f}"
+            f"TEST={r['TEST수익']:.2%}, PF={pf:.2f}, timing_p={tp:.3f}, q80={qv:.3f}"
         )
     (out_dir / "latest_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))

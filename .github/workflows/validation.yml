@@ -109,8 +109,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No report changes"
           else
-            git commit -m "chore: refresh v8.8 validation and shadow paper reports [skip ci]"
+            git commit -m "chore: refresh v8.9 validation and shadow paper reports [skip ci]"
             git push origin HEAD:main
           fi
 
-# v8.8.1: precise adjusted-OHLC diagnostics + frozen validation + health-gated shadow broker
+# v8.9: manual one-factor Adj Close OHLC + frozen validation + verification-exit broker + health gate

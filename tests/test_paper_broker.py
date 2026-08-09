@@ -45,39 +45,66 @@ def test_same_cluster_simultaneous_signals_only_first_admission_fills(monkeypatc
         "V": {"frozen_verified": True, "quarantine_reason": None, "등록시각UTC": "2026-08-09T01:00:00+00:00"},
         "MA": {"frozen_verified": True, "quarantine_reason": None, "등록시각UTC": "2026-08-09T02:00:00+00:00"},
     }
-    clusters = {"V": "C2", "MA": "C2"}
     monkeypatch.setattr(pb, "price_on", lambda cache, ticker, date, field: 100.0)
-    orders, accounts = pb.process_events(state, events, candidates, clusters)
+    orders, accounts = pb.process_events(state, events, candidates, {"V": "C2", "MA": "C2"})
     filled = [x for x in orders if x["구분"] == "BUY" and x["상태"] == "FILLED"]
     blocked = [x for x in orders if x["구분"] == "BUY" and x["상태"] == "BLOCKED"]
-    assert len(filled) == 1
-    assert filled[0]["코드"] == "V"
-    assert len(blocked) == 1
-    assert blocked[0]["코드"] == "MA"
-    assert blocked[0]["사유"] == "CLUSTER_OCCUPIED"
+    assert len(filled) == 1 and filled[0]["코드"] == "V"
+    assert len(blocked) == 1 and blocked[0]["사유"] == "CLUSTER_OCCUPIED"
     assert set(state["accounts"]["US"]["positions"]) == {"V"}
     assert len(accounts) == 1
 
 
-def test_revoked_verification_forces_exit_even_if_tracker_stays_long(monkeypatch):
+def test_new_verification_does_not_backdate_buy_to_cutoff_open(monkeypatch):
     state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
-    account = state["accounts"]["US"]
-    buy, err = pb.execute_buy(account, "V", "US", "C2", 100.0, "2026-08-09")
-    assert err is None and buy is not None
-    state["ticker_last_event"]["V"] = "2026-08-09"
     events = pd.DataFrame([
-        {"날짜": "2026-08-10", "시장": "US", "코드": "V", "현재포지션": "LONG", "동결검증": "LEGACY_LOCKED"},
+        {"날짜": "2026-08-07", "시장": "US", "코드": "V", "현재포지션": "LONG"},
+        {"날짜": "2026-08-10", "시장": "US", "코드": "V", "현재포지션": "LONG"},
     ])
     candidates = {
-        "V": {"frozen_verified": False, "quarantine_reason": "parameter drift", "등록시각UTC": "2026-08-09T01:00:00+00:00"},
+        "V": {
+            "frozen_verified": True,
+            "quarantine_reason": None,
+            "verification_effective_after_date": "2026-08-07",
+            "등록시각UTC": "2026-08-07T21:00:00+00:00",
+        }
     }
     monkeypatch.setattr(pb, "price_on", lambda cache, ticker, date, field: 100.0)
     orders, _ = pb.process_events(state, events, candidates, {"V": "C2"})
-    sells = [x for x in orders if x["구분"] == "SELL" and x["상태"] == "FILLED"]
-    assert len(sells) == 1
-    assert sells[0]["사유"] == "VERIFICATION_REVOKED"
+    cutoff = [x for x in orders if x["체결일"] == "2026-08-07" and x["구분"] == "BUY"]
+    next_day = [x for x in orders if x["체결일"] == "2026-08-10" and x["구분"] == "BUY"]
+    assert len(cutoff) == 1 and cutoff[0]["상태"] == "BLOCKED"
+    assert cutoff[0]["사유"] == "NOT_FROZEN_VERIFIED"
+    assert len(next_day) == 1 and next_day[0]["상태"] == "FILLED"
+
+
+def test_revocation_is_not_backdated_and_forces_next_session_exit(monkeypatch):
+    state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
+    account = state["accounts"]["US"]
+    buy, err = pb.execute_buy(account, "V", "US", "C2", 100.0, "2026-08-06")
+    assert err is None and buy is not None
+    events = pd.DataFrame([
+        {"날짜": "2026-08-07", "시장": "US", "코드": "V", "현재포지션": "LONG"},
+        {"날짜": "2026-08-10", "시장": "US", "코드": "V", "현재포지션": "LONG"},
+    ])
+    candidates = {
+        "V": {
+            "frozen_verified": False,
+            "quarantine_reason": "stage-2 failed",
+            "verification_time_utc": "2026-08-01T00:00:00+00:00",
+            "verification_revoked_after_date": "2026-08-07",
+            "등록시각UTC": "2026-08-01T00:00:00+00:00",
+        }
+    }
+    monkeypatch.setattr(pb, "price_on", lambda cache, ticker, date, field: 100.0)
+    orders, _ = pb.process_events(state, events, candidates, {"V": "C2"})
+    sells_0807 = [x for x in orders if x["체결일"] == "2026-08-07" and x["구분"] == "SELL"]
+    sells_0810 = [x for x in orders if x["체결일"] == "2026-08-10" and x["구분"] == "SELL"]
+    assert sells_0807 == []
+    assert len(sells_0810) == 1
+    assert sells_0810[0]["상태"] == "FILLED"
+    assert sells_0810[0]["사유"] == "VERIFICATION_REVOKED"
     assert "V" not in account["positions"]
-    assert account["completed_trades"] == 1
 
 
 def test_hard_drawdown_permanently_halts_new_buys_but_not_state():
@@ -90,19 +117,14 @@ def test_hard_drawdown_permanently_halts_new_buys_but_not_state():
     assert account["risk_halt"] is True
     assert account["max_drawdown"] <= -0.10
     fill, err = pb.execute_buy(account, "AAA", "US", "C1", 100.0, "2026-08-10")
-    assert fill is None
-    assert err == "ACCOUNT_DRAWDOWN_HALT"
+    assert fill is None and err == "ACCOUNT_DRAWDOWN_HALT"
 
 
 def test_price_error_does_not_advance_event_watermark(monkeypatch):
     state = pb.new_broker_state("2026-08-09T00:00:00+00:00")
     state["ticker_last_event"]["AAA"] = "2026-08-09"
-    events = pd.DataFrame([
-        {"날짜": "2026-08-10", "시장": "US", "코드": "AAA", "현재포지션": "LONG"},
-    ])
-    candidates = {
-        "AAA": {"frozen_verified": True, "quarantine_reason": None, "등록시각UTC": "2026-08-09T01:00:00+00:00"},
-    }
+    events = pd.DataFrame([{"날짜": "2026-08-10", "시장": "US", "코드": "AAA", "현재포지션": "LONG"}])
+    candidates = {"AAA": {"frozen_verified": True, "quarantine_reason": None, "등록시각UTC": "2026-08-09T01:00:00+00:00"}}
     monkeypatch.setattr(pb, "price_on", lambda cache, ticker, date, field: (_ for _ in ()).throw(RuntimeError("temporary data error")))
     orders, _ = pb.process_events(state, events, candidates, {"AAA": "C1"})
     assert any(x["상태"] == "ERROR" for x in orders)

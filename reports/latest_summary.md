@@ -2,7 +2,7 @@
 
 - engine_version: 8.5-frozen-primary
 - scan_mode: FULL80
-- run_at_utc: 2026-08-09T06:35:59+00:00
+- run_at_utc: 2026-08-09T06:38:15+00:00
 - universe: 80
 - analyzed: 42
 - rejected/errors before result row: 38

@@ -4,6 +4,7 @@ Runs a compact Korea+US universe with the same v8 engine, applies
 Benjamini-Hochberg multiple-testing control, and writes CSV/Markdown artifacts.
 No live orders are placed. A run with zero A-grade candidates is valid.
 """
+from datetime import datetime, timezone
 from pathlib import Path
 import json
 import numpy as np
@@ -84,6 +85,7 @@ def main():
     if not checks or not all(checks.values()):
         raise SystemExit(f"self-tests failed: {checks}")
 
+    run_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     cases = []
     for name, ticker in KOREA.items():
         cases.append(("KR", name, ticker, "^KS11"))
@@ -98,10 +100,11 @@ def main():
             data = make_features(raw, markets[benchmark], future=5, target_pct=.01)
             result = analyze_frame(name, ticker, data, future=5, fee=.0015, fast_mode=True)
             result["시장"] = market_name
+            result["실행시각UTC"] = run_at
             rows.append(result)
             print(ticker, result.get("등급"), result.get("선택전략"), result.get("TEST수익"), result.get("탈락사유"))
         except Exception as e:
-            errors.append({"시장": market_name, "종목": name, "코드": ticker, "오류": repr(e)})
+            errors.append({"시장": market_name, "종목": name, "코드": ticker, "오류": repr(e), "실행시각UTC": run_at})
             print(ticker, "ERROR", repr(e))
 
     if not rows:
@@ -120,6 +123,7 @@ def main():
     lines = [
         "# APEX autonomous validation summary",
         "",
+        f"- run_at_utc: {run_at}",
         f"- analyzed: {len(result)}",
         f"- A-grade passed: {len(strict)}",
         f"- watch-or-better: {len(watch)}",
@@ -129,14 +133,14 @@ def main():
         "",
     ]
     for _, r in result.head(10).iterrows():
+        pf = r["PF"] if np.isfinite(r["PF"]) else float("nan")
+        tp = r["타이밍p"] if np.isfinite(r["타이밍p"]) else float("nan")
+        qv = r["다중검정q"] if np.isfinite(r["다중검정q"]) else float("nan")
         lines.append(
             f"- {r['최종등급']} {r['종목']} ({r['코드']}): strategy={r['선택전략']}, "
-            f"TEST={r['TEST수익']:.2%}, PF={r['PF'] if np.isfinite(r['PF']) else float('nan'):.2f}, "
-            f"timing_p={r['타이밍p'] if np.isfinite(r['타이밍p']) else float('nan'):.3f}, "
-            f"q={r['다중검정q'] if np.isfinite(r['다중검정q']) else float('nan'):.3f}"
+            f"TEST={r['TEST수익']:.2%}, PF={pf:.2f}, timing_p={tp:.3f}, q={qv:.3f}"
         )
     (out_dir / "latest_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
     print("\n".join(lines))
 
 

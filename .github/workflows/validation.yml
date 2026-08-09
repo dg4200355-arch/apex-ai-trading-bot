@@ -40,6 +40,7 @@ jobs:
       - run: PYTHONPATH=. python tools/live_validation.py
 
   autonomous-scan:
+    needs: unit
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-scan]')
     runs-on: ubuntu-latest
     timeout-minutes: 55
@@ -113,4 +114,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# v9.0: manual Adj Close OHLC + explicit rejection rows + next-session verification timing + health-gated paper broker
+# v9.0.1: unit-gated full scan + isolated OHLC repair + next-session verification timing + health-gated paper broker

@@ -2,9 +2,9 @@
 
 Stage 2 is rejection-only. It NEVER re-selects a strategy or parameter. It reads
 stage 1's exact strategy family, exact JSON parameters, and exact market-data
-cutoff, reconstructs the same test, checks reproducibility, and only then tries to
-break the frozen strategy with higher costs, nearby parameter perturbations, and a
-10-year historical regime stress ending at the same cutoff.
+cutoff, reconstructs the same purged holdout, checks reproducibility, and only
+then tries to break the frozen strategy with higher costs, nearby parameter
+perturbations, and a 10-year historical regime stress ending at the same cutoff.
 
 All OHLCV passes centralized integrity checks. No live orders are placed.
 """
@@ -17,7 +17,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
-from engine import build_rule_signal, fit_ai_predict, make_features, perf_from_signal
+from engine import build_rule_signal, fit_ai_predict, make_features, perf_from_signal, split_holdout
 from market_data import download_ohlcv
 
 REPORT = Path("reports/latest_validation.csv")
@@ -101,6 +101,14 @@ def fixed_signal(data: pd.DataFrame, pretest: pd.DataFrame, target: pd.DataFrame
     return build_rule_signal(data, kind, params).reindex(target.index).fillna(False)
 
 
+def primary_holdout_split(data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Exact stage-1 split; stage 2 must never use embargo rows as training labels."""
+    pretest, embargo, test = split_holdout(data, future=FUTURE, train_fraction=0.75)
+    if len(embargo) != FUTURE:
+        raise ValueError(f"confirmation embargo mismatch: {len(embargo)} != {FUTURE}")
+    return pretest, embargo, test
+
+
 def history_stress(data10: pd.DataFrame, kind: str, params: Dict[str, float]) -> Tuple[float, float, float, int]:
     n = len(data10)
     start = max(500, int(n * 0.35))
@@ -145,9 +153,12 @@ def confirm_one(row: pd.Series) -> Dict[str, object]:
     data5 = make_features(raw5, bench5, future=FUTURE, target_pct=TARGET_PCT)
     if len(data5) < 850:
         raise ValueError("frozen 5y data insufficient")
-    split = int(len(data5) * 0.75)
-    pretest5 = data5.iloc[:split].copy()
-    test5 = data5.iloc[split:].copy()
+    pretest5, embargo5, test5 = primary_holdout_split(data5)
+    if "Embargo거래일" in row.index and pd.notna(row["Embargo거래일"]):
+        if int(row["Embargo거래일"]) != len(embargo5):
+            raise ValueError(
+                f"primary/confirmation embargo mismatch: primary={int(row['Embargo거래일'])} confirm={len(embargo5)}"
+            )
     base_sig = fixed_signal(data5, pretest5, test5, kind, params)
     base_perf = perf_from_signal(test5, base_sig, BASE_FEE)
     primary_ret = float(row["TEST수익"])
@@ -203,6 +214,9 @@ def confirm_one(row: pd.Series) -> Dict[str, object]:
         "1차TEST수익": primary_ret,
         "재현TEST수익": float(base_perf.ret),
         "재현오차": repro_error,
+        "재현학습끝일": pd.Timestamp(pretest5.index[-1]).date().isoformat(),
+        "재현TEST시작일": pd.Timestamp(test5.index[0]).date().isoformat(),
+        "재현Embargo거래일": len(embargo5),
         "1차q": float(row["다중검정q"]) if np.isfinite(row["다중검정q"]) else np.nan,
         "비용양수비율": fee_positive,
         "비용중앙수익": fee_median_ret,
@@ -234,9 +248,9 @@ def main():
         SUMMARY.write_text("# APEX frozen stress confirmation\n\n- no primary rows\n", encoding="utf-8")
         return
 
-    freeze_cols = {"전략파라미터", "데이터시작일", "데이터기준일"}
+    freeze_cols = {"전략파라미터", "데이터시작일", "데이터기준일", "Embargo거래일"}
     if not freeze_cols.issubset(primary.columns):
-        raise SystemExit(f"primary report predates frozen schema: {sorted(freeze_cols - set(primary.columns))}")
+        raise SystemExit(f"primary report predates purged frozen schema: {sorted(freeze_cols - set(primary.columns))}")
 
     candidates = primary.loc[primary["최종등급"].isin(["A", "B", "관찰"])].copy()
     rows, errors = [], []
@@ -255,6 +269,7 @@ def main():
     lines = [
         "# APEX frozen stress confirmation", "",
         f"- engine: {ENGINE_VERSION}",
+        f"- split: 75% boundary with {FUTURE}-bar purge/embargo",
         f"- candidates from primary scan: {len(candidates)}",
         f"- confirmed: {len(confirmed)}",
         f"- errors: {len(errors)}", "",
@@ -264,8 +279,9 @@ def main():
         for _, r in result.iterrows():
             lines.append(
                 f"- {r['2차등급']} {r['종목']} ({r['코드']}): {r['전략']} {r['전략파라미터']}, "
-                f"repro_error={r['재현오차']:.4f}, cost_med={r['비용중앙수익']:.2%}, "
-                f"neighbor_pos={r['파라미터양수비율']:.0%}, 10y_pos={r['10년양수비율']:.0%}, reason={r['보류사유']}"
+                f"repro_error={r['재현오차']:.4f}, embargo={int(r['재현Embargo거래일'])}, "
+                f"cost_med={r['비용중앙수익']:.2%}, neighbor_pos={r['파라미터양수비율']:.0%}, "
+                f"10y_pos={r['10년양수비율']:.0%}, reason={r['보류사유']}"
             )
     if errors:
         lines += ["", "## Errors", "", "```json", json.dumps(errors, ensure_ascii=False, indent=2), "```"]

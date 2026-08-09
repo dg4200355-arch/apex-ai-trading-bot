@@ -1,21 +1,19 @@
 """Autonomous real-market validation runner.
 
 Every scheduled run scans the full liquid universe: 40 Korea + 40 US stocks.
-Benjamini-Hochberg adjustment uses a fixed family size of all 80 hypotheses,
-including names rejected before a timing p-value is produced.
-
+Benjamini-Hochberg adjustment uses a fixed family size of all 80 hypotheses.
 The exact strategy parameters and exact market-data window selected in stage 1 are
-written into the primary report. Stage 2 must consume those frozen values instead
-of re-selecting a strategy. No live orders are placed.
+written into the primary report. All OHLCV passes centralized integrity checks.
+No live orders are placed.
 """
 from datetime import datetime, timezone
 from pathlib import Path
 import json
 import numpy as np
 import pandas as pd
-import yfinance as yf
 
 from engine import analyze_frame, make_features, run_self_tests, select_ai, select_rule
+from market_data import download_ohlcv
 
 ENGINE_VERSION = "8.5-frozen-primary"
 FAMILY_SIZE = 80
@@ -47,16 +45,7 @@ USA = {
 
 
 def dl(ticker: str, period: str = "5y") -> pd.DataFrame:
-    d = yf.download(ticker, period=period, interval="1d", auto_adjust=True, progress=False, threads=False)
-    if d is None or d.empty:
-        raise RuntimeError(f"no data: {ticker}")
-    if isinstance(d.columns, pd.MultiIndex):
-        d.columns = d.columns.get_level_values(0)
-    d.columns = [str(c).title() for c in d.columns]
-    need = ["Open", "High", "Low", "Close", "Volume"]
-    if any(c not in d.columns for c in need):
-        raise RuntimeError(f"bad OHLCV: {ticker}")
-    return d[need].dropna().sort_index()
+    return download_ohlcv(ticker, period=period)
 
 
 def bh_qvalues(values, family_size: int = FAMILY_SIZE):
@@ -101,11 +90,6 @@ def apply_portfolio_control(df: pd.DataFrame, family_size: int = FAMILY_SIZE) ->
 
 
 def freeze_selected_choice(data: pd.DataFrame, expected_kind: str):
-    """Reproduce analyze_frame's deterministic pre-TEST selection on the same data.
-
-    This is called immediately after analyze_frame during the same run. The result
-    is serialized into the primary report so later stages never need to re-select.
-    """
     split = int(len(data) * 0.75)
     pretest = data.iloc[:split].copy()
     rule = select_rule(pretest, data, BASE_FEE)

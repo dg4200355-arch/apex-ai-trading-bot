@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from market_data import normalize_ohlcv
+from market_data import RANGE_REL_TOL, normalize_ohlcv
 
 
 def good_frame():
@@ -28,10 +28,26 @@ def test_duplicate_dates_are_rejected():
         normalize_ohlcv(d, "TEST")
 
 
-def test_high_invariant_is_rejected():
+def test_small_adjusted_range_mismatch_is_tolerated():
+    d = good_frame()
+    d.loc[d.index[1], "High"] = 100.7
+    d.loc[d.index[1], "Open"] = 101.0
+    assert (101.0 / 100.7 - 1) < RANGE_REL_TOL
+    out = normalize_ohlcv(d, "TEST")
+    assert len(out) == 3
+
+
+def test_material_high_invariant_is_rejected():
     d = good_frame()
     d.loc[d.index[1], "High"] = 99
-    with pytest.raises(ValueError, match="high-price invariant"):
+    with pytest.raises(ValueError, match="high-price invariant|high-low invariant"):
+        normalize_ohlcv(d, "TEST")
+
+
+def test_high_below_low_is_rejected():
+    d = good_frame()
+    d.loc[d.index[1], "High"] = 95
+    with pytest.raises(ValueError, match="high-low invariant"):
         normalize_ohlcv(d, "TEST")
 
 

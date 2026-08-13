@@ -87,3 +87,6 @@
 2026-08-13T08:53:57+00:00,Chevron,CVX,US,반전,2026-08-12,대기,CASH,-,4,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NO_NEW_BAR,FROZEN_VERIFIED
 2026-08-13T08:53:58+00:00,Visa,V,US,반전,2026-08-12,대기,CASH,-,4,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NO_NEW_BAR,FROZEN_VERIFIED
 2026-08-13T08:53:58+00:00,Mastercard,MA,US,반전,2026-08-12,대기,CASH,-,4,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NO_NEW_BAR,FROZEN_VERIFIED
+2026-08-13T22:13:01+00:00,Chevron,CVX,US,반전,2026-08-13,현금/청산,CASH,-,5,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NEW_BAR,FROZEN_VERIFIED
+2026-08-13T22:13:02+00:00,Visa,V,US,반전,2026-08-13,현금/청산,CASH,-,5,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NEW_BAR,FROZEN_VERIFIED
+2026-08-13T22:13:02+00:00,Mastercard,MA,US,반전,2026-08-13,현금/청산,CASH,-,5,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NEW_BAR,FROZEN_VERIFIED

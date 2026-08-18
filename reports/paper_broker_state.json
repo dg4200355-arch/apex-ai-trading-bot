@@ -33,9 +33,9 @@
     }
   },
   "ticker_last_event": {
-    "CVX": "2026-08-17",
-    "V": "2026-08-17",
-    "MA": "2026-08-17"
+    "CVX": "2026-08-18",
+    "V": "2026-08-18",
+    "MA": "2026-08-18"
   },
   "price_basis": "RAW_EXECUTION",
   "price_basis_migrated_at_utc": "2026-08-09T08:23:40+00:00",

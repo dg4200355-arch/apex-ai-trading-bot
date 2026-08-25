@@ -12,5 +12,5 @@ This stage never places orders.
 ## Status
 
 - Chevron (CVX): cluster=C1, leader=-, max_corr=-0.045 vs Mastercard, risk=-, allowed=❌, waiting=전진검증
-- Visa (V): cluster=C2, leader=-, max_corr=0.855 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
-- Mastercard (MA): cluster=C2, leader=-, max_corr=0.855 vs Visa, risk=⚠️, allowed=❌, waiting=전진검증
+- Visa (V): cluster=C2, leader=-, max_corr=0.856 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
+- Mastercard (MA): cluster=C2, leader=-, max_corr=0.856 vs Visa, risk=⚠️, allowed=❌, waiting=전진검증

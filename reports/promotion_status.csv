@@ -1,4 +1,4 @@
 ﻿승격가능,최종상태,동결검증,종목,코드,전략,관측거래일,완료거래,전진누적수익,전진MDD,승률,PF,비용스트레스수익,부트스트랩양수확률,방향성p,전진다중검정q,현재포지션,대기조건,게이트
-❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,반전,12,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
-❌,관찰중,FROZEN_VERIFIED,Visa,V,반전,12,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
-❌,관찰중,FROZEN_VERIFIED,Mastercard,MA,반전,12,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
+❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,반전,13,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
+❌,관찰중,FROZEN_VERIFIED,Visa,V,반전,13,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
+❌,관찰중,FROZEN_VERIFIED,Mastercard,MA,반전,13,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission

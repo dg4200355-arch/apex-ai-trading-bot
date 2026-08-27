@@ -8,6 +8,6 @@
 
 ## Latest
 
-- Chevron (CVX): verify=FROZEN_VERIFIED, date=2026-08-26, signal=현금/청산, position=CASH, forward=0.00%, obs=14, update=NEW_BAR
-- Visa (V): verify=FROZEN_VERIFIED, date=2026-08-26, signal=현금/청산, position=CASH, forward=0.00%, obs=14, update=NEW_BAR
-- Mastercard (MA): verify=FROZEN_VERIFIED, date=2026-08-26, signal=현금/청산, position=CASH, forward=0.00%, obs=14, update=NEW_BAR
+- Chevron (CVX): verify=FROZEN_VERIFIED, date=2026-08-27, signal=현금/청산, position=CASH, forward=0.00%, obs=15, update=NEW_BAR
+- Visa (V): verify=FROZEN_VERIFIED, date=2026-08-27, signal=현금/청산, position=CASH, forward=0.00%, obs=15, update=NEW_BAR
+- Mastercard (MA): verify=FROZEN_VERIFIED, date=2026-08-27, signal=현금/청산, position=CASH, forward=0.00%, obs=15, update=NEW_BAR

@@ -13,6 +13,6 @@ No status places orders or guarantees future returns.
 
 ## Status
 
-- 관찰중 Chevron (CVX): frozen=LEGACY_LOCKED, obs=15, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
-- 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=15, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Mastercard (MA): frozen=FROZEN_VERIFIED, obs=15, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Chevron (CVX): frozen=LEGACY_LOCKED, obs=16, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
+- 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=16, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Mastercard (MA): frozen=FROZEN_VERIFIED, obs=16, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익

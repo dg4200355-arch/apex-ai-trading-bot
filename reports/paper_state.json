@@ -27,12 +27,12 @@
     "trade_returns": [],
     "registered_market_date": "2026-08-07",
     "model_cutoff": "2026-08-07",
-    "frozen_verified": false,
-    "quarantine_reason": "no longer in current stage-2 candidate set",
-    "verification_time_utc": "2026-08-09T07:37:00+00:00",
+    "frozen_verified": true,
+    "quarantine_reason": null,
+    "verification_time_utc": "2026-08-30T23:43:09+00:00",
     "admission_engine": "8.5-frozen-confirm",
-    "verification_effective_after_date": "2026-08-07",
-    "verification_revoked_after_date": "2026-08-27"
+    "verification_effective_after_date": "2026-08-28",
+    "verification_revoked_after_date": null
   },
   "V": {
     "종목": "Visa",

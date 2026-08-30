@@ -2,7 +2,7 @@
 
 - engine_version: 8.5-frozen-primary
 - scan_mode: FULL80
-- run_at_utc: 2026-08-28T05:32:08+00:00
+- run_at_utc: 2026-08-30T23:40:56+00:00
 - universe: 80
 - result_rows: 80
 - valid-data normal rejections: 12
@@ -15,18 +15,18 @@
 
 ## Top candidates
 
-- 탈락 Micron (MU): strategy=추세 {"fast": 21, "rsi_max": 74, "slow": 200, "vol_min": 0.7}, TEST=223.95%, PF=3.05, timing_p=0.296, q80=1.000, repairs=0, embargo=5, data_end=2026-08-27
+- 탈락 Micron (MU): strategy=추세 {"fast": 21, "rsi_max": 74, "slow": 200, "vol_min": 0.7}, TEST=223.95%, PF=3.05, timing_p=0.284, q80=1.000, repairs=0, embargo=5, data_end=2026-08-28
 - 탈락 LG이노텍 (011070.KS): strategy=돌파 {"lookback": 20, "vol": 1.15}, TEST=189.88%, PF=8.48, timing_p=0.259, q80=1.000, repairs=3, embargo=5, data_end=2026-08-28
-- 탈락 AMD (AMD): strategy=추세 {"fast": 8, "rsi_max": 76, "slow": 55, "vol_min": 0.65}, TEST=151.92%, PF=2.81, timing_p=0.111, q80=1.000, repairs=0, embargo=5, data_end=2026-08-27
-- 탈락 Caterpillar (CAT): strategy=돌파 {"lookback": 55, "vol": 1.0}, TEST=44.42%, PF=3.61, timing_p=0.407, q80=1.000, repairs=0, embargo=5, data_end=2026-08-27
+- 탈락 AMD (AMD): strategy=추세 {"fast": 8, "rsi_max": 76, "slow": 55, "vol_min": 0.65}, TEST=146.44%, PF=2.77, timing_p=0.185, q80=1.000, repairs=0, embargo=5, data_end=2026-08-28
+- 탈락 Caterpillar (CAT): strategy=돌파 {"lookback": 55, "vol": 1.0}, TEST=42.91%, PF=3.54, timing_p=0.457, q80=1.000, repairs=0, embargo=5, data_end=2026-08-28
 - 탈락 하나금융지주 (086790.KS): strategy=반전 {"bb": 0.25, "rsi": 40}, TEST=23.07%, PF=157.65, timing_p=0.358, q80=1.000, repairs=2, embargo=5, data_end=2026-08-28
-- B POSCO홀딩스 (005490.KS): strategy=돌파 {"lookback": 20, "vol": 0.9}, TEST=31.58%, PF=17.76, timing_p=0.198, q80=1.000, repairs=1, embargo=5, data_end=2026-08-28
+- 탈락 POSCO홀딩스 (005490.KS): strategy=돌파 {"lookback": 20, "vol": 0.9}, TEST=32.24%, PF=24.57, timing_p=0.210, q80=1.000, repairs=1, embargo=5, data_end=2026-08-28
 - 탈락 신한지주 (055550.KS): strategy=돌파 {"lookback": 20, "vol": 0.9}, TEST=22.23%, PF=3.59, timing_p=0.420, q80=1.000, repairs=2, embargo=5, data_end=2026-08-28
-- 탈락 Alphabet (GOOGL): strategy=추세 {"fast": 21, "rsi_max": 74, "slow": 200, "vol_min": 0.7}, TEST=34.78%, PF=1.75, timing_p=0.457, q80=1.000, repairs=0, embargo=5, data_end=2026-08-27
-- 탈락 Amazon (AMZN): strategy=반전 {"bb": 0.1, "rsi": 35}, TEST=25.19%, PF=nan, timing_p=0.049, q80=1.000, repairs=0, embargo=5, data_end=2026-08-27
+- 탈락 Alphabet (GOOGL): strategy=추세 {"fast": 21, "rsi_max": 74, "slow": 200, "vol_min": 0.7}, TEST=34.78%, PF=1.75, timing_p=0.481, q80=1.000, repairs=0, embargo=5, data_end=2026-08-28
+- 탈락 Amazon (AMZN): strategy=반전 {"bb": 0.1, "rsi": 35}, TEST=25.19%, PF=nan, timing_p=0.049, q80=1.000, repairs=0, embargo=5, data_end=2026-08-28
 - 탈락 기아 (000270.KS): strategy=추세 {"fast": 21, "rsi_max": 76, "slow": 100, "vol_min": 0.65}, TEST=32.47%, PF=1.57, timing_p=0.235, q80=1.000, repairs=2, embargo=5, data_end=2026-08-28
-- B Visa (V): strategy=반전 {"bb": 0.25, "rsi": 40}, TEST=12.11%, PF=4.69, timing_p=0.049, q80=1.000, repairs=0, embargo=5, data_end=2026-08-27
+- B Visa (V): strategy=반전 {"bb": 0.25, "rsi": 40}, TEST=12.11%, PF=4.69, timing_p=0.049, q80=1.000, repairs=0, embargo=5, data_end=2026-08-28
 - 탈락 셀트리온 (068270.KS): strategy=반전 {"bb": 0.18, "rsi": 38}, TEST=17.14%, PF=5.73, timing_p=0.086, q80=1.000, repairs=5, embargo=5, data_end=2026-08-28
+- B Chevron (CVX): strategy=반전 {"bb": 0.25, "rsi": 40}, TEST=14.64%, PF=16.03, timing_p=0.148, q80=1.000, repairs=0, embargo=5, data_end=2026-08-28
 - 탈락 HLB (028300.KQ): strategy=반전 {"bb": 0.25, "rsi": 40}, TEST=11.35%, PF=nan, timing_p=0.259, q80=1.000, repairs=7, embargo=5, data_end=2026-08-28
 - 탈락 우리금융지주 (316140.KS): strategy=반전 {"bb": 0.25, "rsi": 40}, TEST=7.55%, PF=2.45, timing_p=0.284, q80=1.000, repairs=1, embargo=5, data_end=2026-08-28
-- 탈락 ExxonMobil (XOM): strategy=반전 {"bb": 0.25, "rsi": 40}, TEST=15.39%, PF=nan, timing_p=0.198, q80=1.000, repairs=0, embargo=5, data_end=2026-08-27

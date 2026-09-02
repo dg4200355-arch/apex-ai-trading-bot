@@ -1,4 +1,4 @@
 ﻿포트폴리오허용,최종상태,동결검증,종목,코드,시장,전략,상관군집,군집대표,군집대표종목,최대상관,최대상관대상,공통거래일,중복위험,포트폴리오대기조건,데이터오류,게이트
-❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,US,반전,C1,-,-,-0.05157452762390442,Mastercard,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.8565427508335635,Mastercard,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Mastercard,MA,US,반전,C2,-,-,0.8565427508335635,Visa,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,US,반전,C1,-,-,-0.05134298207497959,Mastercard,251,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.8571553944875557,Mastercard,251,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Mastercard,MA,US,반전,C2,-,-,0.8571553944875557,Visa,251,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader

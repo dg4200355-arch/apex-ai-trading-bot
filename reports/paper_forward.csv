@@ -184,3 +184,7 @@
 2026-09-03T23:27:15+00:00,Mastercard,MA,US,반전,2026-09-03,현금/청산,CASH,-,20,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NEW_BAR,FROZEN_VERIFIED
 2026-09-03T23:27:16+00:00,AbbVie,ABBV,US,돌파,2026-09-03,현금/청산,CASH,-,1,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NEW_BAR,LEGACY_LOCKED
 2026-09-03T23:27:17+00:00,AbbVie,ABBV,US,돌파,2026-09-03,인증상태변경,CASH,-,1,0,,,0.0,0.0,paper-forward-1.3-verification-timing,VERIFICATION_UPDATE,FROZEN_VERIFIED
+2026-09-04T12:15:39+00:00,Chevron,CVX,US,반전,2026-09-03,대기,CASH,-,20,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NO_NEW_BAR,FROZEN_VERIFIED
+2026-09-04T12:15:40+00:00,Visa,V,US,반전,2026-09-03,대기,CASH,-,20,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NO_NEW_BAR,FROZEN_VERIFIED
+2026-09-04T12:15:40+00:00,Mastercard,MA,US,반전,2026-09-03,대기,CASH,-,20,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NO_NEW_BAR,FROZEN_VERIFIED
+2026-09-04T12:15:40+00:00,AbbVie,ABBV,US,돌파,2026-09-03,대기,CASH,-,1,0,,,0.0,0.0,paper-forward-1.3-verification-timing,NO_NEW_BAR,FROZEN_VERIFIED

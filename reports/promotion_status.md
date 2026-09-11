@@ -17,4 +17,4 @@ No status places orders or guarantees future returns.
 - 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=24, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 Mastercard (MA): frozen=FROZEN_VERIFIED, obs=24, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=5, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 신한지주 (055550.KS): frozen=FROZEN_VERIFIED, obs=1, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 신한지주 (055550.KS): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=1.69%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5

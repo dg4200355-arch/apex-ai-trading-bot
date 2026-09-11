@@ -6,10 +6,22 @@
     "KR": {
       "currency": "KRW",
       "initial_cash": 10000000.0,
-      "cash": 10000000.0,
-      "peak_equity": 10000000.0,
-      "last_equity": 10000000.0,
-      "positions": {},
+      "cash": 7559727.37345,
+      "peak_equity": 10043527.37345,
+      "last_equity": 10043527.37345,
+      "positions": {
+        "055550.KS": {
+          "ticker": "055550.KS",
+          "market": "KR",
+          "cluster": "C4",
+          "qty": 22,
+          "entry_price": 110755.34999999999,
+          "entry_fee": 3654.9265499999997,
+          "cost_total": 2440272.6265499997,
+          "entry_date": "2026-09-11",
+          "last_price": 112900.0
+        }
+      },
       "realized_pnl": 0.0,
       "completed_trades": 0,
       "max_drawdown": 0.0,
@@ -37,7 +49,7 @@
     "V": "2026-09-10",
     "MA": "2026-09-10",
     "ABBV": "2026-09-10",
-    "055550.KS": "2026-09-10"
+    "055550.KS": "2026-09-11"
   },
   "price_basis": "RAW_EXECUTION",
   "price_basis_migrated_at_utc": "2026-08-09T08:23:40+00:00",

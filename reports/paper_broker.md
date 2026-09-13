@@ -15,5 +15,4 @@
 
 ## This run
 
-- order/action events: 1
-- 2026-09-11 KR 055550.KS BUY FILLED SIGNAL_ENTRY
+- order/action events: 0

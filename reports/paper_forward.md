@@ -8,8 +8,8 @@
 
 ## Latest
 
-- 신한지주 (055550.KS): verify=FROZEN_VERIFIED, date=2026-09-11, signal=대기, position=LONG, forward=1.69%, obs=2, update=NO_NEW_BAR
-- Chevron (CVX): verify=FROZEN_VERIFIED, date=2026-09-11, signal=현금/청산, position=CASH, forward=0.00%, obs=25, update=NEW_BAR
-- Visa (V): verify=FROZEN_VERIFIED, date=2026-09-11, signal=현금/청산, position=CASH, forward=0.00%, obs=25, update=NEW_BAR
-- Mastercard (MA): verify=FROZEN_VERIFIED, date=2026-09-11, signal=현금/청산, position=CASH, forward=0.00%, obs=25, update=NEW_BAR
-- AbbVie (ABBV): verify=FROZEN_VERIFIED, date=2026-09-11, signal=현금/청산, position=CASH, forward=0.00%, obs=6, update=NEW_BAR
+- 신한지주 (055550.KS): verify=FROZEN_VERIFIED, date=2026-09-14, signal=보유/진입, position=LONG, forward=3.22%, obs=3, update=NEW_BAR
+- Chevron (CVX): verify=FROZEN_VERIFIED, date=2026-09-14, signal=현금/청산, position=CASH, forward=0.00%, obs=26, update=NEW_BAR
+- Visa (V): verify=FROZEN_VERIFIED, date=2026-09-14, signal=현금/청산, position=CASH, forward=0.00%, obs=26, update=NEW_BAR
+- Mastercard (MA): verify=FROZEN_VERIFIED, date=2026-09-14, signal=현금/청산, position=CASH, forward=0.00%, obs=26, update=NEW_BAR
+- AbbVie (ABBV): verify=FROZEN_VERIFIED, date=2026-09-14, signal=현금/청산, position=CASH, forward=0.00%, obs=7, update=NEW_BAR

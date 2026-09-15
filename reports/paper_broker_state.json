@@ -8,7 +8,7 @@
       "initial_cash": 10000000.0,
       "cash": 7559727.37345,
       "peak_equity": 10080927.37345,
-      "last_equity": 10080927.37345,
+      "last_equity": 10028127.37345,
       "positions": {
         "055550.KS": {
           "ticker": "055550.KS",
@@ -19,12 +19,12 @@
           "entry_fee": 3654.9265499999997,
           "cost_total": 2440272.6265499997,
           "entry_date": "2026-09-11",
-          "last_price": 114600.0
+          "last_price": 112200.0
         }
       },
       "realized_pnl": 0.0,
       "completed_trades": 0,
-      "max_drawdown": -0.004161884410301742,
+      "max_drawdown": -0.005237613370676408,
       "risk_halt": false,
       "risk_halt_reason": null,
       "dividend_income": 0.0
@@ -49,7 +49,7 @@
     "V": "2026-09-14",
     "MA": "2026-09-14",
     "ABBV": "2026-09-14",
-    "055550.KS": "2026-09-14"
+    "055550.KS": "2026-09-15"
   },
   "price_basis": "RAW_EXECUTION",
   "price_basis_migrated_at_utc": "2026-08-09T08:23:40+00:00",

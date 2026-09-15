@@ -1,6 +1,6 @@
 ﻿포트폴리오허용,최종상태,동결검증,종목,코드,시장,전략,상관군집,군집대표,군집대표종목,최대상관,최대상관대상,공통거래일,중복위험,포트폴리오대기조건,데이터오류,게이트
-❌,관찰중,LEGACY_LOCKED,Chevron,CVX,US,반전,C1,-,-,-0.03050500715669374,AbbVie,250,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.8580263890319565,Mastercard,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Mastercard,MA,US,반전,C2,-,-,0.8580263890319565,Visa,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,AbbVie,ABBV,US,돌파,C3,-,-,0.2485929508154931,Visa,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,Chevron,CVX,US,반전,C1,-,-,-0.03050488419823081,AbbVie,250,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.8580262204158594,Mastercard,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Mastercard,MA,US,반전,C2,-,-,0.8580262204158594,Visa,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,AbbVie,ABBV,US,돌파,C3,-,-,0.2485928029985312,Visa,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
 ❌,관찰중,FROZEN_VERIFIED,신한지주,055550.KS,KR,돌파,C4,-,-,,-,0,-,전진검증,-,portfolio-gate-1.1-cluster-leader

@@ -11,7 +11,7 @@ This stage never places orders.
 
 ## Status
 
-- Chevron (CVX): cluster=C1, leader=-, max_corr=-0.031 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Chevron (CVX): cluster=C1, leader=-, max_corr=-0.027 vs AbbVie, risk=-, allowed=❌, waiting=전진검증
 - Visa (V): cluster=C2, leader=-, max_corr=0.858 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
 - Mastercard (MA): cluster=C2, leader=-, max_corr=0.858 vs Visa, risk=⚠️, allowed=❌, waiting=전진검증
 - AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.249 vs Visa, risk=-, allowed=❌, waiting=전진검증

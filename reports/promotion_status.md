@@ -1,8 +1,8 @@
 # APEX final promotion gate
 
 - gate: promotion-gate-1.3-frozen-admission
-- tracked candidates: 5
-- frozen-confirm verified: 5
+- tracked candidates: 6
+- frozen-confirm verified: 6
 - forward-validated: 0
 - forward-failed: 0
 
@@ -13,8 +13,9 @@ No status places orders or guarantees future returns.
 
 ## Status
 
-- 관찰중 Chevron (CVX): frozen=FROZEN_VERIFIED, obs=27, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=27, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Mastercard (MA): frozen=FROZEN_VERIFIED, obs=27, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=8, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Chevron (CVX): frozen=FROZEN_VERIFIED, obs=28, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=28, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Mastercard (MA): frozen=FROZEN_VERIFIED, obs=28, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=9, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 신한지주 (055550.KS): frozen=FROZEN_VERIFIED, obs=5, trades=0, forward=0.96%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5
+- 관찰중 Caterpillar (CAT): frozen=FROZEN_VERIFIED, obs=1, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익

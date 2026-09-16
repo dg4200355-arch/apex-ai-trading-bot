@@ -1,7 +1,7 @@
 # APEX portfolio concentration gate
 
 - gate: portfolio-gate-1.1-cluster-leader
-- tracked: 5
+- tracked: 6
 - portfolio-allowed: 0
 - high-correlation candidates: 2
 
@@ -11,8 +11,9 @@ This stage never places orders.
 
 ## Status
 
-- Chevron (CVX): cluster=C1, leader=-, max_corr=-0.027 vs AbbVie, risk=-, allowed=❌, waiting=전진검증
-- Visa (V): cluster=C2, leader=-, max_corr=0.858 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
-- Mastercard (MA): cluster=C2, leader=-, max_corr=0.858 vs Visa, risk=⚠️, allowed=❌, waiting=전진검증
-- AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.249 vs Visa, risk=-, allowed=❌, waiting=전진검증
+- Chevron (CVX): cluster=C1, leader=-, max_corr=-0.026 vs AbbVie, risk=-, allowed=❌, waiting=전진검증
+- Visa (V): cluster=C2, leader=-, max_corr=0.857 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
+- Mastercard (MA): cluster=C2, leader=-, max_corr=0.857 vs Visa, risk=⚠️, allowed=❌, waiting=전진검증
+- AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.245 vs Visa, risk=-, allowed=❌, waiting=전진검증
 - 신한지주 (055550.KS): cluster=C4, leader=-, max_corr=- vs -, risk=-, allowed=❌, waiting=전진검증
+- Caterpillar (CAT): cluster=C5, leader=-, max_corr=-0.044 vs AbbVie, risk=-, allowed=❌, waiting=전진검증

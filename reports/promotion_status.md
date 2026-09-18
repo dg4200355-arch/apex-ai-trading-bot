@@ -17,6 +17,6 @@ No status places orders or guarantees future returns.
 - 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=29, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 Mastercard (MA): frozen=LEGACY_LOCKED, obs=29, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=10, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 신한지주 (055550.KS): frozen=FROZEN_VERIFIED, obs=6, trades=0, forward=2.05%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5
+- 관찰중 신한지주 (055550.KS): frozen=FROZEN_VERIFIED, obs=7, trades=0, forward=-0.84%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 Caterpillar (CAT): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 Berkshire (BRK-B): frozen=FROZEN_VERIFIED, obs=1, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익

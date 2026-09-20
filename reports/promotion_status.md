@@ -1,8 +1,8 @@
 # APEX final promotion gate
 
 - gate: promotion-gate-1.3-frozen-admission
-- tracked candidates: 7
-- frozen-confirm verified: 6
+- tracked candidates: 8
+- frozen-confirm verified: 7
 - forward-validated: 0
 - forward-failed: 0
 
@@ -13,10 +13,11 @@ No status places orders or guarantees future returns.
 
 ## Status
 
-- 관찰중 Chevron (CVX): frozen=FROZEN_VERIFIED, obs=29, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=29, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Mastercard (MA): frozen=LEGACY_LOCKED, obs=29, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
-- 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=10, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Chevron (CVX): frozen=FROZEN_VERIFIED, obs=30, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=30, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Mastercard (MA): frozen=LEGACY_LOCKED, obs=30, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
+- 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=11, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 신한지주 (055550.KS): frozen=FROZEN_VERIFIED, obs=7, trades=0, forward=-0.84%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Caterpillar (CAT): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Berkshire (BRK-B): frozen=FROZEN_VERIFIED, obs=1, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Caterpillar (CAT): frozen=FROZEN_VERIFIED, obs=3, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Berkshire (BRK-B): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 셀트리온 (068270.KS): frozen=FROZEN_VERIFIED, obs=1, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익

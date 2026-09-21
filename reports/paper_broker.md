@@ -10,9 +10,11 @@
 
 ## Accounts
 
-- KR KRW: equity=9,981,927.37, cash=7,559,727.37, return=-0.18%, max_dd=-0.98%, halt=False, positions=1, trades=0, dividends=0.00
+- KR KRW: equity=10,019,072.06, cash=7,660,872.06, return=0.19%, max_dd=-0.98%, halt=False, positions=1, trades=1, dividends=0.00
 - US USD: equity=10,000.00, cash=10,000.00, return=0.00%, max_dd=0.00%, halt=False, positions=0, trades=0, dividends=0.00
 
 ## This run
 
-- order/action events: 0
+- order/action events: 2
+- 2026-09-21 KR 055550.KS SELL FILLED SIGNAL_EXIT
+- 2026-09-21 KR 068270.KS BUY FILLED SIGNAL_ENTRY

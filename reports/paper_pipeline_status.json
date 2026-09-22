@@ -1,8 +1,8 @@
 {
   "pipeline": "PAPER_CYCLE",
   "status": "success",
-  "at_utc": "2026-09-21T14:31:59+00:00",
-  "run_id": "35612704006",
-  "trigger_sha": "2c48f48d57ede6ff8cdd03fc3a7da9a94bc08fb6",
+  "at_utc": "2026-09-22T12:49:37+00:00",
+  "run_id": "35729461987",
+  "trigger_sha": "4278221dc887011f6d3d9d521ddc79a324af2f2e",
   "event": "schedule"
 }

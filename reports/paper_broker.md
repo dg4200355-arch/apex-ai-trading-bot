@@ -15,6 +15,4 @@
 
 ## This run
 
-- order/action events: 2
-- 2026-09-21 KR 055550.KS SELL FILLED SIGNAL_EXIT
-- 2026-09-21 KR 068270.KS BUY FILLED SIGNAL_ENTRY
+- order/action events: 0

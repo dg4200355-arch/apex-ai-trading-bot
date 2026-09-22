@@ -10,7 +10,7 @@
 
 ## Accounts
 
-- KR KRW: equity=10,019,072.06, cash=7,660,872.06, return=0.19%, max_dd=-0.98%, halt=False, positions=1, trades=1, dividends=0.00
+- KR KRW: equity=9,981,372.06, cash=7,660,872.06, return=-0.19%, max_dd=-0.99%, halt=False, positions=1, trades=1, dividends=0.00
 - US USD: equity=10,000.00, cash=10,000.00, return=0.00%, max_dd=0.00%, halt=False, positions=0, trades=0, dividends=0.00
 
 ## This run

@@ -1,9 +1,9 @@
 ﻿포트폴리오허용,최종상태,동결검증,종목,코드,시장,전략,상관군집,군집대표,군집대표종목,최대상관,최대상관대상,공통거래일,중복위험,포트폴리오대기조건,데이터오류,게이트
-❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,US,반전,C1,-,-,-0.011518031070826421,Berkshire,249,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.8578238450019974,Mastercard,249,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,Mastercard,MA,US,반전,C2,-,-,0.8578238450019974,Visa,249,⚠️,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,AbbVie,ABBV,US,돌파,C3,-,-,0.2478325339829443,Visa,249,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,신한지주,055550.KS,KR,돌파,C4,-,-,0.4267053616884605,셀트리온,242,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Caterpillar,CAT,US,돌파,C5,-,-,-0.04512868267975885,AbbVie,249,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Berkshire,BRK-B,US,반전,C6,-,-,0.3928575740639349,Mastercard,249,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,셀트리온,068270.KS,KR,반전,C7,-,-,0.4267053616884605,신한지주,242,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,US,반전,C1,-,-,0.0015864681471087951,Berkshire,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.857874911506002,Mastercard,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,Mastercard,MA,US,반전,C2,-,-,0.857874911506002,Visa,250,⚠️,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,AbbVie,ABBV,US,돌파,C3,-,-,0.2478602317390034,Visa,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,신한지주,055550.KS,KR,돌파,C4,-,-,0.4265212842565427,셀트리온,243,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Caterpillar,CAT,US,돌파,C5,-,-,-0.04505559782836068,AbbVie,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Berkshire,BRK-B,US,반전,C6,-,-,0.3885865381719166,Mastercard,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,셀트리온,068270.KS,KR,반전,C7,-,-,0.4265212842565427,신한지주,243,-,전진검증,-,portfolio-gate-1.1-cluster-leader

@@ -1,9 +1,10 @@
 ﻿포트폴리오허용,최종상태,동결검증,종목,코드,시장,전략,상관군집,군집대표,군집대표종목,최대상관,최대상관대상,공통거래일,중복위험,포트폴리오대기조건,데이터오류,게이트
-❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,US,반전,C1,-,-,0.002916133226000336,Berkshire,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.8592633596698531,Mastercard,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,Mastercard,MA,US,반전,C2,-,-,0.8592633596698531,Visa,250,⚠️,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,AbbVie,ABBV,US,돌파,C3,-,-,0.24293307844237377,Visa,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,신한지주,055550.KS,KR,돌파,C4,-,-,0.4332922891311068,셀트리온,240,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Caterpillar,CAT,US,돌파,C5,-,-,-0.04963415181896494,AbbVie,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Berkshire,BRK-B,US,반전,C6,-,-,0.39011262396072827,Mastercard,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,셀트리온,068270.KS,KR,반전,C7,-,-,0.4332922891311068,신한지주,240,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,US,반전,C1,-,-,0.0032222081623124116,Berkshire,249,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.859338899036673,Mastercard,249,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,Mastercard,MA,US,반전,C2,-,-,0.859338899036673,Visa,249,⚠️,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,AbbVie,ABBV,US,돌파,C3,-,-,0.2428063879284187,Visa,249,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,신한지주,055550.KS,KR,돌파,C4,-,-,0.4336285843499144,셀트리온,241,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Caterpillar,CAT,US,돌파,C5,-,-,-0.04900787759244086,AbbVie,249,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Berkshire,BRK-B,US,반전,C6,-,-,0.3901002659624838,Mastercard,249,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,셀트리온,068270.KS,KR,반전,C7,-,-,0.4336285843499144,신한지주,241,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,NAVER,035420.KS,KR,반전,C8,-,-,0.3187057019757821,셀트리온,241,-,전진검증,-,portfolio-gate-1.1-cluster-leader

@@ -6,24 +6,24 @@
     "KR": {
       "currency": "KRW",
       "initial_cash": 10000000.0,
-      "cash": 7660872.056475,
+      "cash": 7650119.655425001,
       "peak_equity": 10080927.37345,
-      "last_equity": 9959272.056475,
+      "last_equity": 9994919.655425001,
       "positions": {
-        "068270.KS": {
-          "ticker": "068270.KS",
+        "035420.KS": {
+          "ticker": "035420.KS",
           "market": "KR",
-          "cluster": "C7",
-          "qty": 13,
-          "entry_price": 179589.75,
-          "entry_fee": 3502.000125,
-          "cost_total": 2338168.750125,
-          "entry_date": "2026-09-21",
-          "last_price": 176800.0
+          "cluster": "C8",
+          "qty": 12,
+          "entry_price": 194997.44999999998,
+          "entry_fee": 3509.9541,
+          "cost_total": 2343479.3541,
+          "entry_date": "2026-09-30",
+          "last_price": 195400.0
         }
       },
-      "realized_pnl": -959.1933999992907,
-      "completed_trades": 1,
+      "realized_pnl": -6400.990474998951,
+      "completed_trades": 2,
       "max_drawdown": -0.01206786959852535,
       "risk_halt": false,
       "risk_halt_reason": null,
@@ -49,11 +49,11 @@
     "V": "2026-09-29",
     "MA": "2026-09-29",
     "ABBV": "2026-09-29",
-    "055550.KS": "2026-09-29",
+    "055550.KS": "2026-09-30",
     "CAT": "2026-09-29",
     "BRK-B": "2026-09-29",
-    "068270.KS": "2026-09-29",
-    "035420.KS": "2026-09-29"
+    "068270.KS": "2026-09-30",
+    "035420.KS": "2026-09-30"
   },
   "price_basis": "RAW_EXECUTION",
   "price_basis_migrated_at_utc": "2026-08-09T08:23:40+00:00",

@@ -2,7 +2,7 @@
 
 - gate: promotion-gate-1.3-frozen-admission
 - tracked candidates: 9
-- frozen-confirm verified: 6
+- frozen-confirm verified: 4
 - forward-validated: 0
 - forward-failed: 0
 
@@ -13,12 +13,12 @@ No status places orders or guarantees future returns.
 
 ## Status
 
-- 관찰중 Chevron (CVX): frozen=FROZEN_VERIFIED, obs=37, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Chevron (CVX): frozen=LEGACY_LOCKED, obs=37, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=37, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 Mastercard (MA): frozen=LEGACY_LOCKED, obs=37, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=18, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 신한지주 (055550.KS): frozen=LEGACY_LOCKED, obs=12, trades=1, forward=0.06%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
-- 관찰중 Caterpillar (CAT): frozen=FROZEN_VERIFIED, obs=10, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 신한지주 (055550.KS): frozen=LEGACY_LOCKED, obs=13, trades=1, forward=0.06%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
+- 관찰중 Caterpillar (CAT): frozen=LEGACY_LOCKED, obs=10, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Berkshire (BRK-B): frozen=FROZEN_VERIFIED, obs=9, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 셀트리온 (068270.KS): frozen=LEGACY_LOCKED, obs=6, trades=0, forward=-0.63%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
-- 관찰중 NAVER (035420.KS): frozen=FROZEN_VERIFIED, obs=1, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 셀트리온 (068270.KS): frozen=LEGACY_LOCKED, obs=7, trades=0, forward=-0.75%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
+- 관찰중 NAVER (035420.KS): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=0.06%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5

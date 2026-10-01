@@ -11,12 +11,12 @@ This stage never places orders.
 
 ## Status
 
-- Chevron (CVX): cluster=C1, leader=-, max_corr=0.004 vs Berkshire, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Chevron (CVX): cluster=C1, leader=-, max_corr=0.002 vs Berkshire, risk=-, allowed=❌, waiting=전진검증
 - Visa (V): cluster=C2, leader=-, max_corr=0.860 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
 - Mastercard (MA): cluster=C2, leader=-, max_corr=0.860 vs Visa, risk=⚠️, allowed=❌, waiting=동결재검증, 전진검증
-- AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.244 vs Visa, risk=-, allowed=❌, waiting=전진검증
-- 신한지주 (055550.KS): cluster=C4, leader=-, max_corr=0.433 vs 셀트리온, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Caterpillar (CAT): cluster=C5, leader=-, max_corr=-0.054 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Berkshire (BRK-B): cluster=C6, leader=-, max_corr=0.391 vs Mastercard, risk=-, allowed=❌, waiting=전진검증
-- 셀트리온 (068270.KS): cluster=C7, leader=-, max_corr=0.433 vs 신한지주, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- NAVER (035420.KS): cluster=C8, leader=-, max_corr=0.317 vs 셀트리온, risk=-, allowed=❌, waiting=전진검증
+- AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.232 vs Visa, risk=-, allowed=❌, waiting=전진검증
+- 신한지주 (055550.KS): cluster=C4, leader=-, max_corr=0.432 vs 셀트리온, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Caterpillar (CAT): cluster=C5, leader=-, max_corr=-0.058 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Berkshire (BRK-B): cluster=C6, leader=-, max_corr=0.394 vs Mastercard, risk=-, allowed=❌, waiting=전진검증
+- 셀트리온 (068270.KS): cluster=C7, leader=-, max_corr=0.432 vs 신한지주, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- NAVER (035420.KS): cluster=C8, leader=-, max_corr=0.319 vs 셀트리온, risk=-, allowed=❌, waiting=동결재검증, 전진검증

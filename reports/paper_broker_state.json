@@ -8,7 +8,7 @@
       "initial_cash": 10000000.0,
       "cash": 7650119.655425001,
       "peak_equity": 10080927.37345,
-      "last_equity": 9994919.655425001,
+      "last_equity": 9950519.655425001,
       "positions": {
         "035420.KS": {
           "ticker": "035420.KS",
@@ -19,12 +19,12 @@
           "entry_fee": 3509.9541,
           "cost_total": 2343479.3541,
           "entry_date": "2026-09-30",
-          "last_price": 195400.0
+          "last_price": 191700.0
         }
       },
       "realized_pnl": -6400.990474998951,
       "completed_trades": 2,
-      "max_drawdown": -0.01206786959852535,
+      "max_drawdown": -0.012936083476650317,
       "risk_halt": false,
       "risk_halt_reason": null,
       "dividend_income": 0.0
@@ -49,11 +49,11 @@
     "V": "2026-09-30",
     "MA": "2026-09-30",
     "ABBV": "2026-09-30",
-    "055550.KS": "2026-09-30",
+    "055550.KS": "2026-10-01",
     "CAT": "2026-09-30",
     "BRK-B": "2026-09-30",
-    "068270.KS": "2026-09-30",
-    "035420.KS": "2026-09-30"
+    "068270.KS": "2026-10-01",
+    "035420.KS": "2026-10-01"
   },
   "price_basis": "RAW_EXECUTION",
   "price_basis_migrated_at_utc": "2026-08-09T08:23:40+00:00",

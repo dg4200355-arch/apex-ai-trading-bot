@@ -20,26 +20,38 @@
     "US": {
       "currency": "USD",
       "initial_cash": 10000.0,
-      "cash": 10000.0,
+      "cash": 7834.415910427109,
       "peak_equity": 10000.0,
-      "last_equity": 10000.0,
-      "positions": {},
+      "last_equity": 9990.60585183336,
+      "positions": {
+        "V": {
+          "ticker": "V",
+          "market": "US",
+          "cluster": "C2",
+          "qty": 6,
+          "entry_price": 360.39009645080563,
+          "entry_fee": 3.2435108680572506,
+          "cost_total": 2165.584089572891,
+          "entry_date": "2026-10-02",
+          "last_price": 359.364990234375
+        }
+      },
       "realized_pnl": 0.0,
       "completed_trades": 0,
-      "max_drawdown": 0.0,
+      "max_drawdown": -0.0009394148166640415,
       "risk_halt": false,
       "risk_halt_reason": null,
       "dividend_income": 0.0
     }
   },
   "ticker_last_event": {
-    "CVX": "2026-10-01",
-    "V": "2026-10-01",
-    "MA": "2026-10-01",
-    "ABBV": "2026-10-01",
+    "CVX": "2026-10-02",
+    "V": "2026-10-02",
+    "MA": "2026-10-02",
+    "ABBV": "2026-10-02",
     "055550.KS": "2026-10-02",
-    "CAT": "2026-10-01",
-    "BRK-B": "2026-10-01",
+    "CAT": "2026-10-02",
+    "BRK-B": "2026-10-02",
     "068270.KS": "2026-10-02",
     "035420.KS": "2026-10-02"
   },

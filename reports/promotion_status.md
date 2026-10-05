@@ -1,8 +1,8 @@
 # APEX final promotion gate
 
 - gate: promotion-gate-1.3-frozen-admission
-- tracked candidates: 9
-- frozen-confirm verified: 4
+- tracked candidates: 10
+- frozen-confirm verified: 5
 - forward-validated: 0
 - forward-failed: 0
 
@@ -14,11 +14,12 @@ No status places orders or guarantees future returns.
 ## Status
 
 - 관찰중 Chevron (CVX): frozen=FROZEN_VERIFIED, obs=40, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=40, trades=0, forward=-0.54%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Mastercard (MA): frozen=LEGACY_LOCKED, obs=40, trades=0, forward=-0.59%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
+- 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=40, trades=0, forward=-0.18%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Mastercard (MA): frozen=LEGACY_LOCKED, obs=40, trades=0, forward=-0.13%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=21, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 신한지주 (055550.KS): frozen=LEGACY_LOCKED, obs=15, trades=1, forward=0.06%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
 - 관찰중 Caterpillar (CAT): frozen=LEGACY_LOCKED, obs=13, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Berkshire (BRK-B): frozen=FROZEN_VERIFIED, obs=12, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 셀트리온 (068270.KS): frozen=LEGACY_LOCKED, obs=9, trades=0, forward=1.43%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
 - 관찰중 NAVER (035420.KS): frozen=LEGACY_LOCKED, obs=4, trades=0, forward=-1.69%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
+- 관찰중 Coca-Cola (KO): frozen=FROZEN_VERIFIED, obs=1, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익

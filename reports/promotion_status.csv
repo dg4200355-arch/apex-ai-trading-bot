@@ -1,10 +1,11 @@
 ﻿승격가능,최종상태,동결검증,종목,코드,전략,관측거래일,완료거래,전진누적수익,전진MDD,승률,PF,비용스트레스수익,부트스트랩양수확률,방향성p,전진다중검정q,현재포지션,대기조건,게이트
 ❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,반전,40,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
-❌,관찰중,FROZEN_VERIFIED,Visa,V,반전,40,0,-0.0053597515995655,-0.0053597515995655876,,,,,,,LONG,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
-❌,관찰중,LEGACY_LOCKED,Mastercard,MA,반전,40,0,-0.0059111594852863,-0.00591115948528631,,,,,,,LONG,"동결재검증, 관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
+❌,관찰중,FROZEN_VERIFIED,Visa,V,반전,40,0,-0.0017506948232796,-0.0053597515995655876,,,,,,,LONG,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
+❌,관찰중,LEGACY_LOCKED,Mastercard,MA,반전,40,0,-0.0012949966826553,-0.00591115948528631,,,,,,,LONG,"동결재검증, 관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
 ❌,관찰중,FROZEN_VERIFIED,AbbVie,ABBV,돌파,21,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
 ❌,관찰중,LEGACY_LOCKED,신한지주,055550.KS,돌파,15,1,0.000613369467028,-0.039381138534969384,1.0,inf,-0.002386630532972056,,,,CASH,"동결재검증, 관측<60, 거래<5",promotion-gate-1.3-frozen-admission
 ❌,관찰중,LEGACY_LOCKED,Caterpillar,CAT,돌파,13,0,0.0,0.0,,,,,,,CASH,"동결재검증, 관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
 ❌,관찰중,FROZEN_VERIFIED,Berkshire,BRK-B,반전,12,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
 ❌,관찰중,LEGACY_LOCKED,셀트리온,068270.KS,반전,9,0,0.0142701949860726,-0.024328007895544457,,,,,,,LONG,"동결재검증, 관측<60, 거래<5",promotion-gate-1.3-frozen-admission
 ❌,관찰중,LEGACY_LOCKED,NAVER,035420.KS,반전,4,0,-0.0168532580810671,-0.01999843089234532,,,,,,,LONG,"동결재검증, 관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
+❌,관찰중,FROZEN_VERIFIED,Coca-Cola,KO,반전,1,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission

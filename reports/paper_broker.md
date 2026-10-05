@@ -11,8 +11,9 @@
 ## Accounts
 
 - KR KRW: equity=9,959,094.19, cash=9,959,094.19, return=-0.41%, max_dd=-1.29%, halt=False, positions=0, trades=3, dividends=0.00
-- US USD: equity=9,998.38, cash=7,834.42, return=-0.02%, max_dd=-0.09%, halt=False, positions=1, trades=0, dividends=0.00
+- US USD: equity=10,035.08, cash=7,834.42, return=0.35%, max_dd=-0.09%, halt=False, positions=1, trades=0, dividends=0.00
 
 ## This run
 
-- order/action events: 0
+- order/action events: 1
+- 2026-10-05 US MA BUY BLOCKED NOT_FROZEN_VERIFIED

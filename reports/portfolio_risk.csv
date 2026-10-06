@@ -1,11 +1,11 @@
 ﻿포트폴리오허용,최종상태,동결검증,종목,코드,시장,전략,상관군집,군집대표,군집대표종목,최대상관,최대상관대상,공통거래일,중복위험,포트폴리오대기조건,데이터오류,게이트
-❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,US,반전,C1,-,-,0.07527906129341704,Coca-Cola,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.8636821158072592,Mastercard,250,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,Mastercard,MA,US,반전,C2,-,-,0.8636821158072592,Visa,250,⚠️,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,AbbVie,ABBV,US,돌파,C3,-,-,0.3123013388403112,Coca-Cola,250,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,신한지주,055550.KS,KR,돌파,C4,-,-,0.42532102678290956,셀트리온,241,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,Caterpillar,CAT,US,돌파,C5,-,-,-0.04946668729721706,AbbVie,250,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,FROZEN_VERIFIED,Berkshire,BRK-B,US,반전,C6,-,-,0.3975528618927141,Mastercard,250,-,전진검증,-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,셀트리온,068270.KS,KR,반전,C7,-,-,0.42532102678290956,신한지주,241,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,NAVER,035420.KS,KR,반전,C8,-,-,0.3225565545394115,셀트리온,241,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
-❌,관찰중,LEGACY_LOCKED,Coca-Cola,KO,US,반전,C9,-,-,0.3123013388403112,AbbVie,250,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Chevron,CVX,US,반전,C1,-,-,0.07516376289676026,Coca-Cola,251,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Visa,V,US,반전,C2,-,-,0.8636825769315456,Mastercard,251,⚠️,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,Mastercard,MA,US,반전,C2,-,-,0.8636825769315456,Visa,251,⚠️,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,AbbVie,ABBV,US,돌파,C3,-,-,0.3099087910141493,Coca-Cola,251,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,신한지주,055550.KS,KR,돌파,C4,-,-,0.4262801299231324,셀트리온,241,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,Caterpillar,CAT,US,돌파,C5,-,-,-0.05300385484214255,AbbVie,251,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,FROZEN_VERIFIED,Berkshire,BRK-B,US,반전,C6,-,-,0.39735361339436287,Mastercard,251,-,전진검증,-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,셀트리온,068270.KS,KR,반전,C7,-,-,0.4262801299231324,신한지주,241,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,NAVER,035420.KS,KR,반전,C8,-,-,0.3225460665427004,셀트리온,241,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader
+❌,관찰중,LEGACY_LOCKED,Coca-Cola,KO,US,반전,C9,-,-,0.3099087910141493,AbbVie,251,-,"동결재검증, 전진검증",-,portfolio-gate-1.1-cluster-leader

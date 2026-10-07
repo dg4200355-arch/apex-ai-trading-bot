@@ -20,24 +20,12 @@
     "US": {
       "currency": "USD",
       "initial_cash": 10000.0,
-      "cash": 7834.415910427109,
+      "cash": 10048.300941476686,
       "peak_equity": 10054.53584450914,
-      "last_equity": 10054.53584450914,
-      "positions": {
-        "V": {
-          "ticker": "V",
-          "market": "US",
-          "cluster": "C2",
-          "qty": 6,
-          "entry_price": 360.39009645080563,
-          "entry_fee": 3.2435108680572506,
-          "cost_total": 2165.584089572891,
-          "entry_date": "2026-10-02",
-          "last_price": 370.0199890136719
-        }
-      },
-      "realized_pnl": 0.0,
-      "completed_trades": 0,
+      "last_equity": 10048.300941476686,
+      "positions": {},
+      "realized_pnl": 48.300941476684784,
+      "completed_trades": 1,
       "max_drawdown": -0.0009394148166640415,
       "risk_halt": false,
       "risk_halt_reason": null,
@@ -45,16 +33,16 @@
     }
   },
   "ticker_last_event": {
-    "CVX": "2026-10-06",
-    "V": "2026-10-06",
-    "MA": "2026-10-06",
-    "ABBV": "2026-10-06",
+    "CVX": "2026-10-07",
+    "V": "2026-10-07",
+    "MA": "2026-10-07",
+    "ABBV": "2026-10-07",
     "055550.KS": "2026-10-07",
-    "CAT": "2026-10-06",
-    "BRK-B": "2026-10-06",
+    "CAT": "2026-10-07",
+    "BRK-B": "2026-10-07",
     "068270.KS": "2026-10-07",
     "035420.KS": "2026-10-07",
-    "KO": "2026-10-06"
+    "KO": "2026-10-07"
   },
   "price_basis": "RAW_EXECUTION",
   "price_basis_migrated_at_utc": "2026-08-09T08:23:40+00:00",

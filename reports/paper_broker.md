@@ -11,8 +11,9 @@
 ## Accounts
 
 - KR KRW: equity=9,959,094.19, cash=9,959,094.19, return=-0.41%, max_dd=-1.29%, halt=False, positions=0, trades=3, dividends=0.00
-- US USD: equity=10,048.30, cash=10,048.30, return=0.48%, max_dd=-0.09%, halt=False, positions=0, trades=1, dividends=0.00
+- US USD: equity=10,079.41, cash=7,599.64, return=0.79%, max_dd=-0.09%, halt=False, positions=1, trades=1, dividends=0.00
 
 ## This run
 
-- order/action events: 0
+- order/action events: 1
+- 2026-10-09 US ABBV BUY FILLED SIGNAL_ENTRY

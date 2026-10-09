@@ -11,13 +11,13 @@ This stage never places orders.
 
 ## Status
 
-- Chevron (CVX): cluster=C1, leader=-, max_corr=0.074 vs Coca-Cola, risk=-, allowed=❌, waiting=전진검증
-- Visa (V): cluster=C2, leader=-, max_corr=0.864 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
-- Mastercard (MA): cluster=C2, leader=-, max_corr=0.864 vs Visa, risk=⚠️, allowed=❌, waiting=동결재검증, 전진검증
-- AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.307 vs Coca-Cola, risk=-, allowed=❌, waiting=전진검증
+- Chevron (CVX): cluster=C1, leader=-, max_corr=0.088 vs Coca-Cola, risk=-, allowed=❌, waiting=전진검증
+- Visa (V): cluster=C2, leader=-, max_corr=0.865 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
+- Mastercard (MA): cluster=C2, leader=-, max_corr=0.865 vs Visa, risk=⚠️, allowed=❌, waiting=동결재검증, 전진검증
+- AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.306 vs Coca-Cola, risk=-, allowed=❌, waiting=전진검증
 - 신한지주 (055550.KS): cluster=C4, leader=-, max_corr=0.429 vs 셀트리온, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Caterpillar (CAT): cluster=C5, leader=-, max_corr=-0.054 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Berkshire (BRK-B): cluster=C6, leader=-, max_corr=0.395 vs Mastercard, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Caterpillar (CAT): cluster=C5, leader=-, max_corr=-0.055 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Berkshire (BRK-B): cluster=C6, leader=-, max_corr=0.399 vs Mastercard, risk=-, allowed=❌, waiting=동결재검증, 전진검증
 - 셀트리온 (068270.KS): cluster=C7, leader=-, max_corr=0.429 vs 신한지주, risk=-, allowed=❌, waiting=동결재검증, 전진검증
 - NAVER (035420.KS): cluster=C8, leader=-, max_corr=0.324 vs 셀트리온, risk=-, allowed=❌, waiting=전진검증
-- Coca-Cola (KO): cluster=C9, leader=-, max_corr=0.307 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Coca-Cola (KO): cluster=C9, leader=-, max_corr=0.306 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증

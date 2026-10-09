@@ -2,7 +2,7 @@
 
 - gate: promotion-gate-1.3-frozen-admission
 - tracked candidates: 10
-- frozen-confirm verified: 3
+- frozen-confirm verified: 4
 - forward-validated: 0
 - forward-failed: 0
 
@@ -16,7 +16,7 @@ No status places orders or guarantees future returns.
 - 관찰중 Chevron (CVX): frozen=FROZEN_VERIFIED, obs=44, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=44, trades=1, forward=2.34%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5
 - 관찰중 Mastercard (MA): frozen=LEGACY_LOCKED, obs=44, trades=1, forward=2.81%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
-- 관찰중 AbbVie (ABBV): frozen=LEGACY_LOCKED, obs=25, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
+- 관찰중 AbbVie (ABBV): frozen=FROZEN_VERIFIED, obs=25, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 신한지주 (055550.KS): frozen=LEGACY_LOCKED, obs=18, trades=1, forward=0.06%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
 - 관찰중 Caterpillar (CAT): frozen=LEGACY_LOCKED, obs=17, trades=1, forward=-5.49%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Berkshire (BRK-B): frozen=LEGACY_LOCKED, obs=16, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익

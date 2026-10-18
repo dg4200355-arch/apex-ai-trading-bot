@@ -15,4 +15,5 @@
 
 ## This run
 
-- order/action events: 0
+- order/action events: 1
+- 2026-10-16 US ABBV BUY BLOCKED NOT_FROZEN_VERIFIED

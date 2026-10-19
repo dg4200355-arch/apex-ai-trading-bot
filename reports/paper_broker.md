@@ -10,10 +10,12 @@
 
 ## Accounts
 
-- KR KRW: equity=9,923,150.01, cash=7,583,150.01, return=-0.77%, max_dd=-2.39%, halt=False, positions=1, trades=3, dividends=0.00
+- KR KRW: equity=9,854,899.12, cash=9,854,899.12, return=-1.45%, max_dd=-2.39%, halt=False, positions=0, trades=4, dividends=0.00
 - US USD: equity=10,144.15, cash=10,144.15, return=1.44%, max_dd=-0.09%, halt=False, positions=0, trades=2, dividends=0.00
 
 ## This run
 
-- order/action events: 1
-- 2026-10-16 US ABBV BUY BLOCKED NOT_FROZEN_VERIFIED
+- order/action events: 3
+- 2026-10-19 KR 035420.KS SELL FILLED VERIFICATION_REVOKED
+- 2026-10-19 KR 035420.KS BUY BLOCKED NOT_FROZEN_VERIFIED
+- 2026-10-19 US ABBV BUY BLOCKED NOT_FROZEN_VERIFIED

@@ -1,8 +1,8 @@
 # APEX final promotion gate
 
 - gate: promotion-gate-1.3-frozen-admission
-- tracked candidates: 11
-- frozen-confirm verified: 2
+- tracked candidates: 12
+- frozen-confirm verified: 3
 - forward-validated: 0
 - forward-failed: 0
 
@@ -16,11 +16,12 @@ No status places orders or guarantees future returns.
 - 관찰중 Chevron (CVX): frozen=LEGACY_LOCKED, obs=51, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Visa (V): frozen=FROZEN_VERIFIED, obs=51, trades=1, forward=2.34%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5
 - 관찰중 Mastercard (MA): frozen=LEGACY_LOCKED, obs=51, trades=1, forward=2.81%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
-- 관찰중 AbbVie (ABBV): frozen=LEGACY_LOCKED, obs=32, trades=0, forward=4.43%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
-- 관찰중 신한지주 (055550.KS): frozen=LEGACY_LOCKED, obs=24, trades=1, forward=0.06%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
+- 관찰중 AbbVie (ABBV): frozen=LEGACY_LOCKED, obs=32, trades=0, forward=4.82%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
+- 관찰중 신한지주 (055550.KS): frozen=LEGACY_LOCKED, obs=25, trades=1, forward=0.06%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
 - 관찰중 Caterpillar (CAT): frozen=LEGACY_LOCKED, obs=24, trades=1, forward=-5.49%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Berkshire (BRK-B): frozen=LEGACY_LOCKED, obs=23, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
-- 관찰중 셀트리온 (068270.KS): frozen=LEGACY_LOCKED, obs=18, trades=1, forward=2.88%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
-- 관찰중 NAVER (035420.KS): frozen=LEGACY_LOCKED, obs=13, trades=0, forward=-6.46%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익, 전진MDD
+- 관찰중 셀트리온 (068270.KS): frozen=LEGACY_LOCKED, obs=19, trades=1, forward=2.88%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5
+- 관찰중 NAVER (035420.KS): frozen=LEGACY_LOCKED, obs=14, trades=0, forward=-7.12%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익, 전진MDD
 - 관찰중 Coca-Cola (KO): frozen=LEGACY_LOCKED, obs=12, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Johnson&Johnson (JNJ): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Eli Lilly (LLY): frozen=FROZEN_VERIFIED, obs=1, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익

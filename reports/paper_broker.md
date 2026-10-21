@@ -15,4 +15,6 @@
 
 ## This run
 
-- order/action events: 0
+- order/action events: 2
+- 2026-10-20 US ABBV BUY BLOCKED NOT_FROZEN_VERIFIED
+- 2026-10-21 KR 035420.KS BUY BLOCKED NOT_FROZEN_VERIFIED

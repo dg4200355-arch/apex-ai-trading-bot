@@ -2,7 +2,7 @@
 
 - gate: promotion-gate-1.3-frozen-admission
 - tracked candidates: 12
-- frozen-confirm verified: 3
+- frozen-confirm verified: 2
 - forward-validated: 0
 - forward-failed: 0
 
@@ -24,4 +24,4 @@ No status places orders or guarantees future returns.
 - 관찰중 NAVER (035420.KS): frozen=LEGACY_LOCKED, obs=14, trades=0, forward=-8.97%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익, 전진MDD
 - 관찰중 Coca-Cola (KO): frozen=LEGACY_LOCKED, obs=12, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Johnson&Johnson (JNJ): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
-- 관찰중 Eli Lilly (LLY): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 Eli Lilly (LLY): frozen=LEGACY_LOCKED, obs=2, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익

@@ -15,6 +15,4 @@
 
 ## This run
 
-- order/action events: 2
-- 2026-10-21 US ABBV BUY FILLED SIGNAL_ENTRY
-- 2026-10-22 KR 035420.KS BUY BLOCKED NOT_FROZEN_VERIFIED
+- order/action events: 0

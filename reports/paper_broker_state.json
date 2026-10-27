@@ -20,31 +20,43 @@
     "US": {
       "currency": "USD",
       "initial_cash": 10000.0,
-      "cash": 10130.319328533875,
+      "cash": 7829.324904085511,
       "peak_equity": 10149.251656561792,
-      "last_equity": 10130.319328533875,
-      "positions": {},
+      "last_equity": 10104.604933382387,
+      "positions": {
+        "ABBV": {
+          "ticker": "ABBV",
+          "market": "US",
+          "cluster": "C3",
+          "qty": 8,
+          "entry_price": 287.1935127868652,
+          "entry_fee": 3.4463221534423822,
+          "cost_total": 2300.994424448364,
+          "entry_date": "2026-10-27",
+          "last_price": 284.4100036621094
+        }
+      },
       "realized_pnl": 130.3193285338757,
       "completed_trades": 3,
-      "max_drawdown": -0.00336784380068611,
+      "max_drawdown": -0.004399016271366074,
       "risk_halt": false,
       "risk_halt_reason": null,
       "dividend_income": 0.0
     }
   },
   "ticker_last_event": {
-    "CVX": "2026-10-26",
-    "V": "2026-10-26",
-    "MA": "2026-10-26",
-    "ABBV": "2026-10-26",
+    "CVX": "2026-10-27",
+    "V": "2026-10-27",
+    "MA": "2026-10-27",
+    "ABBV": "2026-10-27",
     "055550.KS": "2026-10-27",
-    "CAT": "2026-10-26",
-    "BRK-B": "2026-10-26",
+    "CAT": "2026-10-27",
+    "BRK-B": "2026-10-27",
     "068270.KS": "2026-10-27",
     "035420.KS": "2026-10-27",
-    "KO": "2026-10-26",
-    "JNJ": "2026-10-26",
-    "LLY": "2026-10-26"
+    "KO": "2026-10-27",
+    "JNJ": "2026-10-27",
+    "LLY": "2026-10-27"
   },
   "price_basis": "RAW_EXECUTION",
   "price_basis_migrated_at_utc": "2026-08-09T08:23:40+00:00",

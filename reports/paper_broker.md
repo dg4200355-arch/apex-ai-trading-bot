@@ -15,4 +15,5 @@
 
 ## This run
 
-- order/action events: 0
+- order/action events: 1
+- 2026-10-29 KR 035420.KS BUY BLOCKED NOT_FROZEN_VERIFIED

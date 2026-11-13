@@ -11,16 +11,16 @@ This stage never places orders.
 
 ## Status
 
-- Chevron (CVX): cluster=C1, leader=-, max_corr=0.090 vs Coca-Cola, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Chevron (CVX): cluster=C1, leader=-, max_corr=0.092 vs Coca-Cola, risk=-, allowed=❌, waiting=동결재검증, 전진검증
 - Visa (V): cluster=C2, leader=-, max_corr=0.875 vs Mastercard, risk=⚠️, allowed=❌, waiting=전진검증
 - Mastercard (MA): cluster=C2, leader=-, max_corr=0.875 vs Visa, risk=⚠️, allowed=❌, waiting=전진검증
-- AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.522 vs Johnson&Johnson, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- 신한지주 (055550.KS): cluster=C4, leader=-, max_corr=0.412 vs 셀트리온, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Caterpillar (CAT): cluster=C5, leader=-, max_corr=0.011 vs Eli Lilly, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Berkshire (BRK-B): cluster=C6, leader=-, max_corr=0.414 vs Mastercard, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- 셀트리온 (068270.KS): cluster=C7, leader=-, max_corr=0.412 vs 신한지주, risk=-, allowed=❌, waiting=전진검증
-- NAVER (035420.KS): cluster=C8, leader=-, max_corr=0.344 vs 셀트리온, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Coca-Cola (KO): cluster=C9, leader=-, max_corr=0.385 vs Johnson&Johnson, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Johnson&Johnson (JNJ): cluster=C10, leader=-, max_corr=0.522 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- AbbVie (ABBV): cluster=C3, leader=-, max_corr=0.523 vs Johnson&Johnson, risk=-, allowed=❌, waiting=전진검증
+- 신한지주 (055550.KS): cluster=C4, leader=-, max_corr=0.421 vs 셀트리온, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Caterpillar (CAT): cluster=C5, leader=-, max_corr=0.012 vs Eli Lilly, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Berkshire (BRK-B): cluster=C6, leader=-, max_corr=0.426 vs Mastercard, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- 셀트리온 (068270.KS): cluster=C7, leader=-, max_corr=0.421 vs 신한지주, risk=-, allowed=❌, waiting=전진검증
+- NAVER (035420.KS): cluster=C8, leader=-, max_corr=0.340 vs 셀트리온, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Coca-Cola (KO): cluster=C9, leader=-, max_corr=0.386 vs Johnson&Johnson, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Johnson&Johnson (JNJ): cluster=C10, leader=-, max_corr=0.523 vs AbbVie, risk=-, allowed=❌, waiting=동결재검증, 전진검증
 - Eli Lilly (LLY): cluster=C11, leader=-, max_corr=0.471 vs Johnson&Johnson, risk=-, allowed=❌, waiting=동결재검증, 전진검증
-- Walmart (WMT): cluster=C12, leader=-, max_corr=0.377 vs Coca-Cola, risk=-, allowed=❌, waiting=동결재검증, 전진검증
+- Walmart (WMT): cluster=C12, leader=-, max_corr=0.376 vs Coca-Cola, risk=-, allowed=❌, waiting=동결재검증, 전진검증

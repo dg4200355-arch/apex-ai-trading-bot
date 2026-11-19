@@ -11,8 +11,14 @@
 ## Accounts
 
 - KR KRW: equity=9,854,899.12, cash=9,854,899.12, return=-1.45%, max_dd=-2.39%, halt=False, positions=0, trades=4, dividends=0.00
-- US USD: equity=9,931.03, cash=2,871.54, return=-0.69%, max_dd=-2.90%, halt=False, positions=3, trades=4, dividends=0.00
+- US USD: equity=9,822.66, cash=9,822.66, return=-1.77%, max_dd=-3.96%, halt=False, positions=0, trades=7, dividends=0.00
 
 ## This run
 
-- order/action events: 0
+- order/action events: 6
+- 2026-11-19 US ABBV SELL FILLED SIGNAL_EXIT
+- 2026-11-19 US JNJ SELL FILLED VERIFICATION_REVOKED
+- 2026-11-19 US XOM SELL FILLED VERIFICATION_REVOKED
+- 2026-11-19 US CVX BUY BLOCKED NOT_FROZEN_VERIFIED
+- 2026-11-19 US JNJ BUY BLOCKED NOT_FROZEN_VERIFIED
+- 2026-11-19 US XOM BUY BLOCKED NOT_FROZEN_VERIFIED

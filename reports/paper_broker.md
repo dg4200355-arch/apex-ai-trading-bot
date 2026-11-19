@@ -15,6 +15,4 @@
 
 ## This run
 
-- order/action events: 2
-- 2026-11-18 US CVX BUY BLOCKED NOT_FROZEN_VERIFIED
-- 2026-11-18 US JNJ BUY FILLED SIGNAL_ENTRY
+- order/action events: 0

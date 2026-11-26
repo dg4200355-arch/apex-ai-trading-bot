@@ -12,6 +12,6 @@
 ❌,관찰중,LEGACY_LOCKED,Johnson&Johnson,JNJ,돌파,29,1,-0.0674659175485742,-0.07895412447210148,0.0,0.0,-0.07046591754857423,,,,CASH,"동결재검증, 관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
 ❌,관찰중,LEGACY_LOCKED,Eli Lilly,LLY,반전,29,0,0.0,0.0,,,,,,,CASH,"동결재검증, 관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
 ❌,관찰중,LEGACY_LOCKED,Walmart,WMT,반전,14,0,0.0,0.0,,,,,,,CASH,"동결재검증, 관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
-❌,관찰중,FROZEN_VERIFIED,ExxonMobil,XOM,반전,8,0,0.0,-0.06083478101688622,,,,,,,LONG,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
+❌,관찰중,FROZEN_VERIFIED,ExxonMobil,XOM,반전,8,0,-0.0590134032410483,-0.06083478101688622,,,,,,,LONG,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
 ❌,관찰중,FROZEN_VERIFIED,Costco,COST,돌파,5,0,-0.0168198068390564,-0.01512749969206617,,,,,,,LONG,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission
 ❌,관찰중,FROZEN_VERIFIED,대한항공,003490.KS,반전,2,0,0.0,0.0,,,,,,,CASH,"관측<60, 거래<5, 전진수익",promotion-gate-1.3-frozen-admission

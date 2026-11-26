@@ -26,6 +26,6 @@ No status places orders or guarantees future returns.
 - 관찰중 Johnson&Johnson (JNJ): frozen=LEGACY_LOCKED, obs=29, trades=1, forward=-6.75%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Eli Lilly (LLY): frozen=LEGACY_LOCKED, obs=29, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
 - 관찰중 Walmart (WMT): frozen=LEGACY_LOCKED, obs=14, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=동결재검증, 관측<60, 거래<5, 전진수익
-- 관찰중 ExxonMobil (XOM): frozen=FROZEN_VERIFIED, obs=8, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
+- 관찰중 ExxonMobil (XOM): frozen=FROZEN_VERIFIED, obs=8, trades=0, forward=-5.90%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 Costco (COST): frozen=FROZEN_VERIFIED, obs=5, trades=0, forward=-1.68%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익
 - 관찰중 대한항공 (003490.KS): frozen=FROZEN_VERIFIED, obs=2, trades=0, forward=0.00%, bootstrap=-, forward_q=-, waiting=관측<60, 거래<5, 전진수익

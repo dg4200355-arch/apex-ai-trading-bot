@@ -15,6 +15,4 @@
 
 ## This run
 
-- order/action events: 2
-- 2026-11-25 US CVX BUY BLOCKED NOT_FROZEN_VERIFIED
-- 2026-11-25 US XOM BUY BLOCKED NOT_FROZEN_VERIFIED
+- order/action events: 0
